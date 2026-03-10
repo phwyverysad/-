@@ -6,5 +6,5 @@ if ($null -eq $steamPath) {
     Start-Process "https://store.steampowered.com/about/"
 } else {
     Write-Host "พบ Steam ในเครื่อง กำลังดำเนินการ..." -ForegroundColor Green
-    irm "https://is.gd/X338ky" | iex
+    irm "https://is.gd/VDucD3" | iex
 }
