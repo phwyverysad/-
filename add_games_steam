@@ -9,5 +9,5 @@ if (-not (Test-Path $steamPath)) {
     Start-Process "https://store.steampowered.com/about/"
 } else {
     Write-Host "พบ Steam แล้ว กำลังรันสคริปต์หลัก..." -ForegroundColor Green
-    irm "https://is.gd/X338ky" | iex
+    irm "https://raw.githubusercontent.com/plathx/-/refs/heads/main/install-plugin.ps1" | iex
 }
