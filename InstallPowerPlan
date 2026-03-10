@@ -1,51 +1,43 @@
-# 1. ขอสิทธิ์ Admin
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    exit
+# 1. บังคับรันด้วยสิทธิ์ Administrator
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    Exit
 }
 
-# 2. สร้าง Restore Point
-Write-Host "--- กำลังสร้าง System Restore Point ---" -ForegroundColor Cyan
-Checkpoint-Computer -Description "PowerPlanInstall" -RestorePointType "MODIFY_SETTINGS" -ErrorAction SilentlyContinue
+# กำหนดตัวแปร
+$dir = "C:\phwyverysad"
+$url1 = "https://is.gd/dtF1gW"
+$url2 = "https://is.gd/Fly5ky"
+$file1 = "$dir\KernelOS.Performance.V6.1.IDLE.ON.pow"
+$file2 = "$dir\UltimatePerformance.pow"
 
-# 3. เตรียมโฟลเดอร์ทำงาน (ใช้ C:\PowerPlans เพื่อเลี่ยงปัญหา Temp)
-$workDir = "C:\PowerPlans"
-if (!(Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir | Out-Null }
-Set-Location $workDir
+# ขั้นตอนแรก: สร้าง System Restore Point
+Write-Host "กำลังสร้าง System Restore Point..." -ForegroundColor Cyan
+Checkpoint-Computer -Description "Before Applying Performance Plans" -RestorePointType "MODIFY_SETTINGS"
 
-# 4. ดาวน์โหลดไฟล์
-$files = @{
-    "KernelOS.pow" = "https://github.com/halks0/KernelOS-Power-Plan/raw/master/KernelOS%20Performance%20V6.1%20IDLE%20ON.pow"
-    "Ultimate.pow" = "https://github.com/halks0/Ultimate-Performance-Power-Plan/raw/master/UltimatePerformance.pow"
+# ขั้นตอนที่สอง: สร้างโฟลเดอร์
+if (!(Test-Path $dir)) {
+    New-Item -Path $dir -ItemType Directory | Out-Null
+    Write-Host "สร้างโฟลเดอร์ $dir แล้ว" -ForegroundColor Green
 }
 
-foreach ($name in $files.Keys) {
-    Write-Host "กำลังดาวน์โหลด $name ..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
-}
+# ดาวน์โหลดไฟล์
+Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Yellow
+Invoke-WebRequest -Uri $url1 -OutFile $file1
+Invoke-WebRequest -Uri $url2 -OutFile $file2
 
-# 5. ติดตั้งและหา GUID ด้วยการ List ดู
-Write-Host "กำลังติดตั้งและค้นหา GUID..." -ForegroundColor Green
+# ขั้นตอนที่สาม: ติดตั้ง/Import Power Plans
+Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Yellow
+$plan1 = powercfg -import $file1
+$plan2 = powercfg -import $file2
 
-# ลบแผนเดิมที่อาจมีชื่อซ้ำกันก่อน (เพื่อป้องกันการ Import ล้มเหลว)
-powercfg -import "$workDir\Ultimate.pow"
-powercfg -import "$workDir\KernelOS.pow"
+Write-Host "Import สำเร็จ:"
+Write-Host $plan1
+Write-Host $plan2
 
-# ใช้คำสั่ง List เพื่อดึงแผนการใช้พลังงานล่าสุด
-$plans = powercfg -list
-Write-Host "แผนการใช้พลังงานที่พบ:" -ForegroundColor Gray
-$plans | Select-String "Ultimate" -Context 0,1
+# ขั้นตอนสุดท้าย: ลบโฟลเดอร์
+Write-Host "กำลังทำความสะอาดไฟล์ชั่วคราว..." -ForegroundColor Gray
+Remove-Item -Path $dir -Recurse -Force
+Write-Host "เสร็จสิ้นทุกขั้นตอน!" -ForegroundColor Green
 
-# พยายามตั้ง Active โดยใช้การหา GUID จากชื่อไฟล์หรือรายการ
-# ในที่นี้จะลองใช้คำสั่งตั้ง Active ตรงๆ ด้วยชื่อแผน
-$targetPlan = $plans | Select-String "Ultimate"
-if ($targetPlan) {
-    $guid = ($targetPlan.ToString() -split "\s+")[3]
-    powercfg -setactive $guid
-    Write-Host "ตั้งค่า Active สำเร็จที่ GUID: $guid" -ForegroundColor Green
-} else {
-    Write-Host "ไม่พบแผน Ultimate Performance กรุณาเช็คใน Control Panel > Power Options" -ForegroundColor Red
-}
-
-Write-Host "`nเสร็จสิ้น! หากไม่พบแผนพลังงาน ให้ลองเข้าไปดูใน Control Panel > Power Options"
-Read-Host "กด Enter เพื่อปิด..."
+Read-Host "กด Enter เพื่อปิดหน้าต่างนี้"
