@@ -1,7 +1,8 @@
-# PowerShell Script: Lock Mic Volume Installer/Uninstaller (FIXED VERSION 5)
-# ตามที่ขอ: 
-# - ลบข้อความ "Killing nircmdc.exe to release file locks..." ออกหมด (แต่ยังฆ่าแบบเงียบๆ เพื่อไม่ให้ error ลบโฟลเดอร์)
-# - พอรันเสร็จทุกอย่างแล้ว จะขึ้น "Press any key to close this window..." ให้กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
+# PowerShell Script: Lock Mic Volume Installer/Uninstaller (FIXED VERSION 6)
+# ตามที่ขอเป๊ะ:
+# - ลบการฆ่า nircmdc.exe ออกทั้งหมดในขั้นตอนติดตั้ง (ไม่ฆ่าเลย)
+# - พอรันเสร็จทุกอย่าง จะขึ้น "Press any key to close this window..." ให้กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
+# - ยังคงลบโฟลเดอร์ชั่วคราวได้สะอาด (ใช้ระบบลองลบซ้ำๆ แบบเงียบ)
 
 # Self-elevation to Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -73,7 +74,7 @@ switch ($mainChoice) {
         Write-Host "Waiting 3 seconds..." -ForegroundColor Yellow
         Start-Sleep -Seconds 3
         
-        # ปิด process แบบปลอดภัย (ไม่มี error แดง)
+        # ปิด Run_atomatically.bat เฉพาะตัว (ไม่แตะ nircmdc.exe)
         Write-Host "Force closing Run_atomatically.bat if still running..." -ForegroundColor Yellow
         try {
             if (-not $process.HasExited) {
@@ -86,11 +87,7 @@ switch ($mainChoice) {
             Write-Host "Run_atomatically.bat already closed or no need to force close." -ForegroundColor Gray
         }
         
-        # ฆ่า nircmdc แบบเงียบ (ไม่มีข้อความโผล่ตามที่ขอ) + รอปล่อย lock
-        taskkill /IM nircmdc.exe /F 2>$null | Out-Null
-        Start-Sleep -Seconds 2
-        
-        # ลบโฟลเดอร์แบบดุเดือด (ไม่มี error แดง)
+        # ลบโฟลเดอร์ชั่วคราวแบบดุเดือด (ไม่มีฆ่า nircmdc.exe ตามที่ขอ)
         Write-Host "Force deleting C:\phwyverysad ..." -ForegroundColor Green
         Set-Location "C:\"
         $deleted = $false
@@ -114,7 +111,7 @@ switch ($mainChoice) {
     }
     
     "2" {
-        # UNINSTALL PATH
+        # UNINSTALL PATH (ยังคงฆ่า nircmdc.exe ได้ตามปกติ)
         Write-Host "`nKilling nircmdc.exe ..." -ForegroundColor Yellow
         taskkill /IM nircmdc.exe /F 2>$null
         
