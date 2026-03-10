@@ -6,12 +6,17 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 }
 
 Write-Host "--- กำลังสร้าง System Restore Point (กรุณารอ...) ---" -ForegroundColor Cyan
-Enable-ComputerRestore -Drive "C:\" 2>$null
-Checkpoint-Computer -Description "Before Importing Power Plans" -RestorePointType "MODIFY_SETTINGS"
+try {
+    Checkpoint-Computer -Description "Before Importing Power Plans" -RestorePointType "MODIFY_SETTINGS"
+    Write-Host "สร้าง Restore Point เรียบร้อย" -ForegroundColor Green
+} catch {
+    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (อาจปิดระบบนี้ไว้)" -ForegroundColor Yellow
+}
 
 # 2. ตั้งค่าโฟลเดอร์ทำงาน
 $workDir = "$env:TEMP\PowerPlans"
-if (!(Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir | Out-Null }
+if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force }
+New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
 # 3. ดาวน์โหลดไฟล์
@@ -25,22 +30,33 @@ foreach ($name in $files.Keys) {
     Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name"
 }
 
-# 4. Import Power Plans
+# 4. ฟังก์ชันดึง GUID หลัง Import
+function Get-GuidFromImport {
+    param([string]$FilePath)
+    $output = powercfg -import "$FilePath"
+    # ดึงค่าที่เป็น GUID ออกมา (รูปแบบ XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+    $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
+    if ($match.Success) { return $match.Value.Trim('{}') }
+    return $null
+}
+
 Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Green
 
-# Import Ultimate Performance
-$ult = powercfg -import "$workDir\Ultimate.pow"
-$ultGuid = ($ult -split " ")[3]
-
-# Import KernelOS
-$kernel = powercfg -import "$workDir\KernelOS.pow"
-$kernGuid = ($kernel -split " ")[3]
+$ultGuid = Get-GuidFromImport "$workDir\Ultimate.pow"
+$kernGuid = Get-GuidFromImport "$workDir\KernelOS.pow"
 
 # 5. ตั้งค่า Active เป็น Ultimate Performance
-powercfg -setactive $ultGuid
-Write-Host "ติดตั้งสำเร็จ! ตั้งค่า Ultimate Performance เป็นแผนปัจจุบันแล้ว" -ForegroundColor Green
+if ($ultGuid) {
+    powercfg -setactive $ultGuid
+    Write-Host "ติดตั้งและตั้งค่า Ultimate Performance สำเร็จ ($ultGuid)" -ForegroundColor Green
+} else {
+    Write-Host "เกิดข้อผิดพลาดในการ Import Ultimate Performance" -ForegroundColor Red
+}
 
 # 6. ลบไฟล์ชั่วคราว
-Remove-Item $workDir -Recurse -Force
-Write-Host "กดปุ่มใดๆ เพื่อออกจากโปรแกรม..."
+Set-Location $env:USERPROFILE
+Start-Sleep -Seconds 2
+Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host "`nเสร็จสิ้น! กดปุ่มใดๆ เพื่อออกจากโปรแกรม..."
 Read-Host
