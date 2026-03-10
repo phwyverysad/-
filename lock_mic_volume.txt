@@ -1,0 +1,110 @@
+# Force script to run as Administrator
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Requesting Administrator privileges..."
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    Exit
+}
+
+# Step 1: Create working directory C:\phwyverysad
+$targetDir = "C:\phwyverysad"
+if (!(Test-Path $targetDir)) {
+    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+}
+
+# Step 2: Main Menu
+Write-Host "========== Mic Volume Locker Manager =========="
+Write-Host "1. Install"
+Write-Host "2. Uninstall"
+Write-Host "==============================================="
+$choice1 = Read-Host "Please select an option (1 or 2)"
+
+if ($choice1 -eq '1') {
+    # Option 1: Install
+    $zipUrl = "https://is.gd/NZJRo6"
+    $zipPath = "$targetDir\lock_mic_volume.zip"
+
+    Write-Host "`n[1/4] Downloading source files..."
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+
+    Write-Host "[2/4] Extracting zip file..."
+    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+
+    # Move content from internal folder to C:\phwyverysad
+    $extractFolder = "$targetDir\lock_mic_volume"
+    if (Test-Path $extractFolder) {
+        Move-Item -Path "$extractFolder\*" -Destination $targetDir -Force
+        Remove-Item -Path $extractFolder -Recurse -Force
+    }
+
+    # Remove the temporary zip file
+    Remove-Item -Path $zipPath -Force
+
+    # Select Volume Percentage
+    Write-Host "`nSelect Microphone Lock Level:"
+    Write-Host "1. 100%"
+    Write-Host "2. 75%"
+    Write-Host "3. 50%"
+    Write-Host "4. 25%"
+    $choice2 = Read-Host "Select level (1-4)"
+
+    $percentFolder = ""
+    switch ($choice2) {
+        '1' { $percentFolder = "100%" }
+        '2' { $percentFolder = "75%" }
+        '3' { $percentFolder = "50%" }
+        '4' { $percentFolder = "25%" }
+        default { 
+            Write-Host "Invalid selection. Aborting."
+            exit 
+        }
+    }
+
+    $batPath = "$targetDir\$percentFolder\Run_atomatically.bat"
+
+    Write-Host "`n[3/4] Executing $percentFolder\Run_atomatically.bat..."
+    if (Test-Path $batPath) {
+        # Change location to subfolder to ensure relative paths in .bat work correctly
+        Set-Location -Path "$targetDir\$percentFolder"
+        Start-Process -FilePath $batPath -Wait
+        
+        # Change location back to C:\ to release file lock on the directory
+        Set-Location -Path "C:\"
+    } else {
+        Write-Host "Error: Could not find $batPath"
+        Set-Location -Path "C:\"
+    }
+
+    Write-Host "[4/4] Cleaning up temporary directory (C:\phwyverysad)..."
+    if (Test-Path $targetDir) {
+        Remove-Item -Path $targetDir -Recurse -Force
+    }
+    Write-Host "Installation completed successfully!"
+    
+} elseif ($choice1 -eq '2') {
+    # Step 3: Uninstall
+    Write-Host "`nTerminating nircmdc.exe process..."
+    taskkill /IM nircmdc.exe /F 2>$null
+
+    Write-Host "Deleting system files..."
+    $filesToDelete = @(
+        "C:\Windows\lock_mic_vol.bat",
+        "C:\Windows\hide_cmd_window2.vbs",
+        "C:\Windows\nircmdc.exe"
+    )
+
+    foreach ($file in $filesToDelete) {
+        if (Test-Path $file) {
+            Remove-Item -Path $file -Force
+            Write-Host " - Deleted: $file"
+        } else {
+            Write-Host " - Skipped: $file not found"
+        }
+    }
+    Write-Host "Uninstallation completed!"
+    
+} else {
+    Write-Host "Invalid option selected. Script terminated."
+}
+
+Write-Host "`nPress Enter to exit..."
+Read-Host
