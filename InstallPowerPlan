@@ -14,16 +14,16 @@ try {
     Write-Host "ไม่สามารถสร้าง Restore Point ได้ (ข้ามขั้นตอน)..." -ForegroundColor Yellow
 }
 
-# 3. สร้างโฟลเดอร์ใหม่ด้วยรหัสสุ่มทุกครั้ง เพื่อไม่ให้ชนกับโฟลเดอร์เดิมที่อาจจะติด Lock
-$randomName = [System.Guid]::NewGuid().ToString()
-$workDir = Join-Path $env:TEMP $randomName
+# 3. สร้างโฟลเดอร์ทำงานชั่วคราว
+$workDir = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
-# 4. ดาวน์โหลดไฟล์
+# 4. ดาวน์โหลดไฟล์ (ใช้ลิงก์ตรงที่ถูกต้องสำหรับไฟล์ .pow)
+# หมายเหตุ: หากลิงก์เดิมเป็นหน้าเว็บครอบสั้นๆ ต้องใช้ลิงก์ที่ไฟล์จริงๆ ครับ
 $files = @{
-    "KernelOS.pow" = "https://is.gd/dtF1gW"
-    "Ultimate.pow" = "https://is.gd/Fly5ky"
+    "KernelOS.pow" = "https://github.com/halks0/KernelOS-Power-Plan/raw/master/KernelOS%20Performance%20V6.1%20IDLE%20ON.pow"
+    "Ultimate.pow" = "https://github.com/halks0/Ultimate-Performance-Power-Plan/raw/master/UltimatePerformance.pow"
 }
 
 foreach ($name in $files.Keys) {
@@ -31,16 +31,21 @@ foreach ($name in $files.Keys) {
     try {
         Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
     } catch {
-        Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด $name" -ForegroundColor Red
+        Write-Host "ดาวน์โหลด $name ล้มเหลว! โปรดเช็คการเชื่อมต่ออินเทอร์เน็ต" -ForegroundColor Red
+        Read-Host "กด Enter เพื่อปิด"
+        exit
     }
 }
 
 # 5. ฟังก์ชัน Import
 function Import-PowerPlan {
     param([string]$FilePath)
-    $output = powercfg -import "$FilePath"
-    $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
-    if ($match.Success) { return $match.Value.Trim('{}') }
+    # รัน powercfg และตรวจสอบว่าไฟล์มีขนาดมากกว่า 0 bytes จริงหรือไม่
+    if ((Get-Item $FilePath).Length -gt 0) {
+        $output = powercfg -import "$FilePath"
+        $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
+        if ($match.Success) { return $match.Value.Trim('{}') }
+    }
     return $null
 }
 
@@ -53,11 +58,10 @@ if ($ultGuid) {
     powercfg -setactive $ultGuid
     Write-Host "------------------------------------------------" -ForegroundColor Green
     Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ!" -ForegroundColor Green
+    Write-Host "GUID: $ultGuid" -ForegroundColor Green
     Write-Host "------------------------------------------------" -ForegroundColor Green
 } else {
-    Write-Host "ไม่สามารถ Import แผนพลังงานได้" -ForegroundColor Red
+    Write-Host "ไม่สามารถ Import ไฟล์ได้ (ตรวจสอบไฟล์ที่ดาวน์โหลดว่าใช่ไฟล์ .pow จริงหรือไม่)" -ForegroundColor Red
 }
 
-# จบการทำงาน - ไม่มีการลบโฟลเดอร์เพื่อป้องกัน Error ครับ
-Write-Host "การทำงานเสร็จสิ้น" -ForegroundColor White
 Read-Host "กด Enter เพื่อปิดหน้าต่างนี้..."
