@@ -1,6 +1,7 @@
-# PowerShell Script: Lock Mic Volume Installer/Uninstaller
-# This script MUST be saved as a .ps1 file (e.g. LockMicVolume.ps1) before running.
-# It will automatically request Administrator rights if not already running as admin.
+# PowerShell Script: Lock Mic Volume Installer/Uninstaller (FIXED VERSION)
+# Fixed: Removed -NoNewWindow so the script continues immediately after starting the .bat
+# The Run_atomatically.bat will now open in its OWN window for 3 seconds, then be force-closed automatically.
+# No more hanging at "Running Run_atomatically.bat ..."
 
 # Self-elevation to Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -66,8 +67,8 @@ switch ($mainChoice) {
         }
         
         Set-Location $targetFolder
-        Write-Host "`nRunning Run_atomatically.bat ..." -ForegroundColor Green
-        $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru -NoNewWindow
+        Write-Host "`nRunning Run_atomatically.bat (will open in new window)..." -ForegroundColor Green
+        $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru   # FIXED: No -NoNewWindow → script continues
         
         Write-Host "Waiting 3 seconds..." -ForegroundColor Yellow
         Start-Sleep -Seconds 3
