@@ -4,7 +4,6 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Start-Process powershell.exe -Verb RunAs -ArgumentList $arguments
     exit
 }
-Write-Host "Creating folder C:\phwyverysad..." -ForegroundColor Green
 New-Item -Path "C:\phwyverysad" -ItemType Directory -Force | Out-Null
 Write-Host "`n=== Lock Mic Volume Tool ===" -ForegroundColor Cyan
 Write-Host "1. Install"
@@ -16,11 +15,9 @@ switch ($mainChoice) {
         # INSTALL PATH
         $zipPath = "C:\phwyverysad\lock_mic_volume.zip"
         
-        Write-Host "`nDownloading from https://is.gd/NZJRo6 ..." -ForegroundColor Green
         Invoke-WebRequest -Uri "https://is.gd/NZJRo6" -OutFile $zipPath -UseBasicParsing
         
         Set-Location "C:\phwyverysad"
-        Write-Host "Extracting lock_mic_volume.zip ..." -ForegroundColor Green
         Expand-Archive -Path $zipPath -DestinationPath "." -Force
         $innerFolder = "C:\phwyverysad\lock_mic_volume"
         if (Test-Path $innerFolder) {
@@ -29,7 +26,6 @@ switch ($mainChoice) {
             Remove-Item -Path $innerFolder -Recurse -Force
         }
         Remove-Item -Path $zipPath -Force
-        Write-Host "Download and extraction completed." -ForegroundColor Green
         # Percentage selection
         Write-Host "`nSelect lock volume percentage:" -ForegroundColor Cyan
         Write-Host "1. 100%"
@@ -50,9 +46,7 @@ switch ($mainChoice) {
             exit
         }
         Set-Location $targetFolder
-        Write-Host "`nRunning Run_atomatically.bat (will open in new window)..." -ForegroundColor Green
         $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru
-        Write-Host "Force deleting C:\phwyverysad ..." -ForegroundColor Green
         Set-Location "C:\"
         $deleted = $false
         for ($i = 1; $i -le 5; $i++) {
@@ -60,15 +54,11 @@ switch ($mainChoice) {
                 Remove-Item -Path "C:\phwyverysad" -Recurse -Force -ErrorAction Stop
                 $deleted = $true
                 break
-            } catch {
-                Start-Sleep -Seconds 1
-            }
+            } catch
         }
         
         if ($deleted) {
-            Write-Host "Folder deleted successfully." -ForegroundColor Green
         } else {
-            Write-Host "Note: Temp folder could not be fully deleted (system lock). But installation is complete!" -ForegroundColor Yellow
         }
         
         Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
@@ -100,3 +90,4 @@ switch ($mainChoice) {
     }
 }
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
