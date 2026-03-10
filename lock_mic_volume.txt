@@ -1,6 +1,3 @@
-# PowerShell Script: Lock Mic Volume Installer/Uninstaller (เวอร์ชันที่คุณแก้ไข + แก้ให้รันได้สมบูรณ์)
-# แก้ไขให้ตรงตามที่คุณส่งมาเป๊ะ + เพิ่มส่วนที่ขาด (รอ 3 วินาที + ปิด .bat + ลบโฟลเดอร์สำเร็จ)
-
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
@@ -59,15 +56,12 @@ switch ($mainChoice) {
         Set-Location $targetFolder
         $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru
         
-        # รอ 3 วินาทีตามที่ต้องการ
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 1
         
-        # ปิด Run_atomatically.bat (ไม่ฆ่า nircmdc.exe ตามที่คุณขอ)
         if (-not $process.HasExited) {
             Stop-Process -InputObject $process -Force -ErrorAction SilentlyContinue
         }
         
-        # ลบโฟลเดอร์ชั่วคราว (ไม่ฆ่า nircmdc.exe)
         Set-Location "C:\"
         $deleted = $false
         for ($i = 1; $i -le 5; $i++) {
@@ -76,13 +70,12 @@ switch ($mainChoice) {
                 $deleted = $true
                 break
             } catch {
-                Start-Sleep -Seconds 1
+                Start-Sleep -Seconds 0
             }
         }
        
         Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
-        Write-Host "Press any key to close this window..." -ForegroundColor Yellow
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
     }
    
     "2" {
@@ -104,14 +97,11 @@ switch ($mainChoice) {
         }
        
         Write-Host "`nUninstallation completed successfully!" -ForegroundColor Green
-        Write-Host "Press any key to close this window..." -ForegroundColor Yellow
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
     default {
         Write-Host "Invalid choice! Exiting." -ForegroundColor Red
     }
 }
 
-# กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
