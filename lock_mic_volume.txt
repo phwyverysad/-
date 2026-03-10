@@ -63,11 +63,11 @@ if ($choice1 -eq '1') {
 
     Write-Host "`n[3/4] Executing $percentFolder\Run_atomatically.bat..."
     if (Test-Path $batPath) {
-        # Change location to subfolder to ensure relative paths in .bat work correctly
+        # Change location to subfolder to ensure relative paths work
         Set-Location -Path "$targetDir\$percentFolder"
         Start-Process -FilePath $batPath -Wait
         
-        # Change location back to C:\ to release file lock on the directory
+        # Change location back to C:\ to release file lock
         Set-Location -Path "C:\"
     } else {
         Write-Host "Error: Could not find $batPath"
@@ -86,10 +86,15 @@ if ($choice1 -eq '1') {
     taskkill /IM nircmdc.exe /F 2>$null
 
     Write-Host "Deleting system files..."
+    
+    # Define files to delete including the startup shortcut
+    $startupPath = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup\start_lock_mic_vol.bat"
+    
     $filesToDelete = @(
         "C:\Windows\lock_mic_vol.bat",
         "C:\Windows\hide_cmd_window2.vbs",
-        "C:\Windows\nircmdc.exe"
+        "C:\Windows\nircmdc.exe",
+        $startupPath
     )
 
     foreach ($file in $filesToDelete) {
@@ -107,5 +112,4 @@ if ($choice1 -eq '1') {
 }
 
 Write-Host "`nPress Enter to exit..."
-
 Read-Host
