@@ -1,32 +1,45 @@
-# Anyone seeing this? well don't waste time improving this script.
-# It's messy and just temporary until i get the new version.
+#### Steam Existence Check ####
+$steamPath = (Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Valve\Steam" -ErrorAction SilentlyContinue).InstallPath
 
+if (-not $steamPath) {
+    # สร้างฟังก์ชัน Log ขึ้นมาก่อนเพื่อใช้งานในส่วนนี้
+    function Log {
+        param ([string]$Type, [string]$Message)
+        Write-Host "[$Type] $Message"
+    }
+    
+    Log "ERR" "คุณยังไม่ติดตั้ง Steam ในเครื่อง!"
+    Log "INFO" "กำลังเปิดหน้าดาวน์โหลด Steam..."
+    Start-Process "https://store.steampowered.com/about/"
+    Write-Host ""
+    Log "WARN" "กรุณาติดตั้ง Steam ให้เรียบร้อยก่อนรันคำสั่งนี้อีกครั้ง"
+    Log "AUX" 'คำสั่งรันซ้ำ: irm "is.gd/add_games_steam" | iex'
+    exit
+}
+
+# --- ส่วนที่คุณทำไว้แล้ว ---
 param(
-    [string]$DownloadLink # Overwrites the download link (give a direct link)
+    [string]$DownloadLink
 )
 
 ## Configure this
 $Host.UI.RawUI.WindowTitle = "Luatools plugin installer | .gg/luatools"
-$name = "luatools" # automatic first letter uppercase included
+$name = "luatools"
 $link = "https://github.com/madoiscool/ltsteamplugin/releases/latest/download/ltsteamplugin.zip"
-$milleniumTimer = 5 # in seconds for auto-installation
+$milleniumTimer = 5
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 > $null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-# Hidden defines
-$steam = (Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Valve\Steam").InstallPath
+# ใช้ $steamPath ที่เช็คมาแล้ว
+$steam = $steamPath
 $upperName = $name.Substring(0, 1).ToUpper() + $name.Substring(1).ToLower()
-if ( $DownloadLink ) {
-    $link = $DownloadLink
-}
-
+if ( $DownloadLink ) { $link = $DownloadLink }
 
 #### Logging defines ####
 function Log {
     param ([string]$Type, [string]$Message, [boolean]$NoNewline = $false)
-
     $Type = $Type.ToUpper()
     switch ($Type) {
         "OK" { $foreground = "Green" }
@@ -37,24 +50,19 @@ function Log {
         "AUX" { $foreground = "DarkGray" }
         default { $foreground = "White" }
     }
-
     $date = Get-Date -Format "HH:mm:ss"
     $prefix = if ($NoNewline) { "`r[$date] " } else { "[$date] " }
     Write-Host $prefix -ForegroundColor "Cyan" -NoNewline
-
     Write-Host [$Type] $Message -ForegroundColor $foreground -NoNewline:$NoNewline
 }
+
+Log "OK" "พบ Steam ในเครื่อง: $steam"
 Log "WARN" "Hey! Just letting you know that i'm working on a new version combining various scripts of the server"
 Log "AUX" "Will include language support on THIS script too, luv y'all brazilians"
 Write-Host
 
-# To hide IEX blue box thing
 $ProgressPreference = 'SilentlyContinue'
-
-
-
 Get-Process steam -ErrorAction SilentlyContinue | Stop-Process -Force
-
 
 #### Requirements part ####
 $steamtoolsExe = Join-Path $env:TEMP "st-setup.exe"
@@ -65,29 +73,15 @@ if (Test-Path $stPath) {
 }
 else {
     Log "WARN" "Steamtools not found. Downloading..."
-    
-    # ดาวน์โหลดไฟล์ติดตั้ง
     try {
         Invoke-WebRequest -Uri "https://is.gd/OSraRP" -OutFile $steamtoolsExe
-        
         Log "LOG" "Installing Steamtools silently..."
-        
-        # สั่งรัน .exe แบบเงียบ (Silent Install)
-        # /S คือ parameter มาตรฐานสำหรับ Nullsoft Installer (NSIS) ส่วนใหญ่
         Start-Process -FilePath $steamtoolsExe -ArgumentList "/S" -Wait -NoNewWindow
-        
-        # ลบไฟล์ติดตั้งทิ้งหลังเสร็จสิ้น
         Remove-Item $steamtoolsExe -ErrorAction SilentlyContinue
-        
-        if (Test-Path $stPath) {
-            Log "OK" "Steamtools installed successfully"
-        } else {
-            Log "ERR" "Steamtools installation failed."
-        }
+        if (Test-Path $stPath) { Log "OK" "Steamtools installed successfully" } 
+        else { Log "ERR" "Steamtools installation failed." }
     }
-    catch {
-        Log "ERR" "Failed to download or install Steamtools: $($_.Exception.Message)"
-    }
+    catch { Log "ERR" "Failed to download or install Steamtools: $($_.Exception.Message)" }
 }
 # Millenium check
 $milleniumInstalling = $false
