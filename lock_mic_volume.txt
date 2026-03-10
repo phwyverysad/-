@@ -99,7 +99,4 @@ switch ($mainChoice) {
         Write-Host "Invalid choice! Exiting." -ForegroundColor Red
     }
 }
-Write-Host "`n=====================================" -ForegroundColor Cyan
-Write-Host "ALL DONE! Press any key to close this window..." -ForegroundColor Green
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-
