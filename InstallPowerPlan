@@ -5,21 +5,22 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
+# 2. สร้าง System Restore Point
 Write-Host "--- กำลังสร้าง System Restore Point (กรุณารอ...) ---" -ForegroundColor Cyan
 try {
     Checkpoint-Computer -Description "Before Importing Power Plans" -RestorePointType "MODIFY_SETTINGS"
     Write-Host "สร้าง Restore Point เรียบร้อย" -ForegroundColor Green
 } catch {
-    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (อาจปิดระบบนี้ไว้)" -ForegroundColor Yellow
+    Write-Host "ไม่สามารถสร้าง Restore Point ได้ (อาจปิดระบบนี้ไว้ หรือเพิ่งสร้างไปไม่นานนี้) ข้ามไป..." -ForegroundColor Yellow
 }
 
-# 2. ตั้งค่าโฟลเดอร์ทำงาน
+# 3. เตรียมโฟลเดอร์ทำงาน
 $workDir = "$env:TEMP\PowerPlans"
-if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force }
+if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Path $workDir | Out-Null
 Set-Location $workDir
 
-# 3. ดาวน์โหลดไฟล์
+# 4. ดาวน์โหลดไฟล์
 $files = @{
     "KernelOS.pow" = "https://is.gd/dtF1gW"
     "Ultimate.pow" = "https://is.gd/Fly5ky"
@@ -27,14 +28,13 @@ $files = @{
 
 foreach ($name in $files.Keys) {
     Write-Host "กำลังดาวน์โหลด $name ..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name"
+    Invoke-WebRequest -Uri $files[$name] -OutFile "$workDir\$name" -UseBasicParsing
 }
 
-# 4. ฟังก์ชันดึง GUID หลัง Import
-function Get-GuidFromImport {
+# 5. ฟังก์ชันดึง GUID และ Import
+function Import-PowerPlan {
     param([string]$FilePath)
     $output = powercfg -import "$FilePath"
-    # ดึงค่าที่เป็น GUID ออกมา (รูปแบบ XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
     $match = [regex]::Match($output, '\{[a-f0-9-]{36}\}')
     if ($match.Success) { return $match.Value.Trim('{}') }
     return $null
@@ -42,21 +42,29 @@ function Get-GuidFromImport {
 
 Write-Host "กำลังติดตั้ง Power Plans..." -ForegroundColor Green
 
-$ultGuid = Get-GuidFromImport "$workDir\Ultimate.pow"
-$kernGuid = Get-GuidFromImport "$workDir\KernelOS.pow"
+$ultGuid = Import-PowerPlan "$workDir\Ultimate.pow"
+$kernGuid = Import-PowerPlan "$workDir\KernelOS.pow"
 
-# 5. ตั้งค่า Active เป็น Ultimate Performance
+# 6. ตั้งค่า Active
 if ($ultGuid) {
     powercfg -setactive $ultGuid
-    Write-Host "ติดตั้งและตั้งค่า Ultimate Performance สำเร็จ ($ultGuid)" -ForegroundColor Green
+    Write-Host "ติดตั้งและเปิดใช้งาน Ultimate Performance สำเร็จ ($ultGuid)" -ForegroundColor Green
 } else {
-    Write-Host "เกิดข้อผิดพลาดในการ Import Ultimate Performance" -ForegroundColor Red
+    Write-Host "เกิดข้อผิดพลาดในการ Import Power Plans" -ForegroundColor Red
 }
 
-# 6. ลบไฟล์ชั่วคราว
+# 7. ทำความสะอาดแบบปลอดภัย
+Write-Host "กำลังทำความสะอาดไฟล์ชั่วคราว..." -ForegroundColor Gray
 Set-Location $env:USERPROFILE
-Start-Sleep -Seconds 2
-Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 3 # รอให้ Windows ปล่อยการเข้าถึงไฟล์
 
-Write-Host "`nเสร็จสิ้น! กดปุ่มใดๆ เพื่อออกจากโปรแกรม..."
+try {
+    # ลบเฉพาะไฟล์ข้างใน ไม่ลบโฟลเดอร์หลัก เพื่อป้องกัน Error "In use"
+    Remove-Item "$workDir\*" -Force -Recurse -ErrorAction SilentlyContinue
+    Remove-Item $workDir -Force -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "ระบบยังล็อคไฟล์อยู่เล็กน้อย ไม่ต้องกังวลครับ Windows จะจัดการล้าง Temp ให้เอง" -ForegroundColor DarkGray
+}
+
+Write-Host "`nเสร็จสิ้น! กดปุ่มใดๆ เพื่อออกจากโปรแกรม..." -ForegroundColor White
 Read-Host
