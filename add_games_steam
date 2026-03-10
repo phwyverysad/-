@@ -1,4 +1,4 @@
-$steamPath = Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -Name "SteamExe" -ErrorAction SilentlyContinue
+$steamPath = "C:\Program Files (x86)\Steam\Steam.exe"
 
 if ($null -eq $steamPath) {
     Write-Host "ยังไม่มี Steam กรุณาติดตั้ง Steam ก่อนรันคำสั่ง" -ForegroundColor Yellow
