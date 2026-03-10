@@ -1,6 +1,10 @@
-# PowerShell Script: Lock Mic Volume Installer/Uninstaller (เวอร์ชันที่คุณแก้ไข + แก้ให้รันได้สมบูรณ์)
-# แก้ไขให้ตรงตามที่คุณส่งมาเป๊ะ + เพิ่มส่วนที่ขาด (รอ 3 วินาที + ปิด .bat + ลบโฟลเดอร์สำเร็จ)
+# PowerShell Script: Lock Mic Volume Installer/Uninstaller (FIXED VERSION 6)
+# ตามที่ขอเป๊ะ:
+# - ลบการฆ่า nircmdc.exe ออกทั้งหมดในขั้นตอนติดตั้ง (ไม่ฆ่าเลย)
+# - พอรันเสร็จทุกอย่าง จะขึ้น "Press any key to close this window..." ให้กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
+# - ยังคงลบโฟลเดอร์ชั่วคราวได้สะอาด (ใช้ระบบลองลบซ้ำๆ แบบเงียบ)
 
+# Self-elevation to Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
@@ -8,8 +12,11 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
+# Step 1: Create folder C:\phwyverysad
+Write-Host "Creating folder C:\phwyverysad..." -ForegroundColor Green
 New-Item -Path "C:\phwyverysad" -ItemType Directory -Force | Out-Null
 
+# Main menu
 Write-Host "`n=== Lock Mic Volume Tool ===" -ForegroundColor Cyan
 Write-Host "1. Install"
 Write-Host "2. Uninstall"
@@ -19,12 +26,15 @@ switch ($mainChoice) {
     "1" {
         # INSTALL PATH
         $zipPath = "C:\phwyverysad\lock_mic_volume.zip"
-       
+        
+        Write-Host "`nDownloading from https://is.gd/NZJRo6 ..." -ForegroundColor Green
         Invoke-WebRequest -Uri "https://is.gd/NZJRo6" -OutFile $zipPath -UseBasicParsing
-       
+        
         Set-Location "C:\phwyverysad"
+        Write-Host "Extracting lock_mic_volume.zip ..." -ForegroundColor Green
         Expand-Archive -Path $zipPath -DestinationPath "." -Force
         
+        # Move inner folders
         $innerFolder = "C:\phwyverysad\lock_mic_volume"
         if (Test-Path $innerFolder) {
             Write-Host "Moving percentage folders to C:\phwyverysad ..." -ForegroundColor Green
@@ -33,6 +43,7 @@ switch ($mainChoice) {
         }
         
         Remove-Item -Path $zipPath -Force
+        Write-Host "Download and extraction completed." -ForegroundColor Green
         
         # Percentage selection
         Write-Host "`nSelect lock volume percentage:" -ForegroundColor Cyan
@@ -57,17 +68,27 @@ switch ($mainChoice) {
         }
         
         Set-Location $targetFolder
+        Write-Host "`nRunning Run_atomatically.bat (will open in new window)..." -ForegroundColor Green
         $process = Start-Process -FilePath ".\Run_atomatically.bat" -PassThru
         
-        # รอ 3 วินาทีตามที่ต้องการ
+        Write-Host "Waiting 3 seconds..." -ForegroundColor Yellow
         Start-Sleep -Seconds 3
         
-        # ปิด Run_atomatically.bat (ไม่ฆ่า nircmdc.exe ตามที่คุณขอ)
-        if (-not $process.HasExited) {
-            Stop-Process -InputObject $process -Force -ErrorAction SilentlyContinue
+        # ปิด Run_atomatically.bat เฉพาะตัว (ไม่แตะ nircmdc.exe)
+        Write-Host "Force closing Run_atomatically.bat if still running..." -ForegroundColor Yellow
+        try {
+            if (-not $process.HasExited) {
+                Stop-Process -InputObject $process -Force -ErrorAction Stop
+                Write-Host "Force closed successfully." -ForegroundColor Green
+            } else {
+                Write-Host "Run_atomatically.bat already closed by itself." -ForegroundColor Gray
+            }
+        } catch {
+            Write-Host "Run_atomatically.bat already closed or no need to force close." -ForegroundColor Gray
         }
         
-        # ลบโฟลเดอร์ชั่วคราว (ไม่ฆ่า nircmdc.exe)
+        # ลบโฟลเดอร์ชั่วคราวแบบดุเดือด (ไม่มีฆ่า nircmdc.exe ตามที่ขอ)
+        Write-Host "Force deleting C:\phwyverysad ..." -ForegroundColor Green
         Set-Location "C:\"
         $deleted = $false
         for ($i = 1; $i -le 5; $i++) {
@@ -79,34 +100,44 @@ switch ($mainChoice) {
                 Start-Sleep -Seconds 1
             }
         }
-       
+        
+        if ($deleted) {
+            Write-Host "Folder deleted successfully." -ForegroundColor Green
+        } else {
+            Write-Host "Note: Temp folder could not be fully deleted (system lock). But installation is complete!" -ForegroundColor Yellow
+        }
+        
         Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
     }
-   
+    
     "2" {
+        # UNINSTALL PATH (ยังคงฆ่า nircmdc.exe ได้ตามปกติ)
         Write-Host "`nKilling nircmdc.exe ..." -ForegroundColor Yellow
         taskkill /IM nircmdc.exe /F 2>$null
-       
+        
         $filesToDelete = @(
             "C:\Windows\lock_mic_vol.bat",
             "C:\Windows\hide_cmd_window2.vbs",
             "C:\Windows\nircmdc.exe",
             "$([Environment]::GetFolderPath('Startup'))\start_lock_mic_vol.bat"
         )
-       
+        
         foreach ($file in $filesToDelete) {
             if (Test-Path $file) {
                 Write-Host "Force deleting: $file" -ForegroundColor Green
                 Remove-Item -Path $file -Force -ErrorAction SilentlyContinue
             }
         }
-       
+        
         Write-Host "`nUninstallation completed successfully!" -ForegroundColor Green
     }
+    
     default {
         Write-Host "Invalid choice! Exiting." -ForegroundColor Red
     }
 }
 
-# กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่าง
+# === สิ้นสุดการทำงาน ===
+Write-Host "`n=====================================" -ForegroundColor Cyan
+Write-Host "ALL DONE! Press any key to close this window..." -ForegroundColor Green
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
