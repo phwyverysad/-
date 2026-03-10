@@ -27,3 +27,4 @@ Write-Host $plan1
 Write-Host $plan2
 
 Remove-Item -Path $dir -Recurse -Force
+Write-Host "installation completed successfully!" -ForegroundColor Green
