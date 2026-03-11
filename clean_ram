@@ -58,41 +58,39 @@ do {
         "1" {
             if (Download-EmptyStandbyList) {
                 $Shell = New-Object -ComObject WScript.Shell
-                $TargetFile = "C:\Windows\System32\cmd.exe"
-                $Arguments = '/c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist'
-                $ShortcutName = "Clear Memory.lnk"
-                
-                $DesktopPaths = @(
-                    [System.IO.Path]::Combine($env:USERPROFILE, "Desktop", $ShortcutName),
-                    [System.IO.Path]::Combine($env:USERPROFILE, "OneDrive", "Desktop", $ShortcutName)
-                )
+$TargetFile = "C:\Windows\System32\cmd.exe"
+$Arguments = '/c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist'
+$ShortcutName = "Clear Memory.lnk"
+$DesktopPaths = @(
+    [System.IO.Path]::Combine($env:USERPROFILE, "Desktop", $ShortcutName),
+    [System.IO.Path]::Combine($env:USERPROFILE, "OneDrive", "Desktop", $ShortcutName)
+)
+foreach ($Path in $DesktopPaths) {
+    try {
+        # Check if directory exists before creating shortcut
+        $Dir = Split-Path $Path
+        if (Test-Path $Dir) {
+            $Shortcut = $Shell.CreateShortcut($Path)
+            $Shortcut.TargetPath = $TargetFile
+            $Shortcut.Arguments = $Arguments
+            $Shortcut.WorkingDirectory = "C:\Windows\System32" # Assuming the exe is here or in PATH
+            $Shortcut.IconLocation = "C:\Windows\System32\cmd.exe"
+            $Shortcut.Description = "Clear Standby List and Working Sets"
+            $Shortcut.Save()
+            $bytes = [System.IO.File]::ReadAllBytes($Path)
+            $bytes[21] = $bytes[21] -bor 0x20
+            [System.IO.File]::WriteAllBytes($Path, $bytes)
+            Write-Host "Successfully created shortcut at: $Path" -ForegroundColor Green
+        } else {
+            Write-Warning "Directory not found, skipping: $Dir"
+        }
+    }
+    catch {
+        Write-Error "Failed to create shortcut at $Path : $($_.Exception.Message)"
+    }
+}
 
-                foreach ($Path in $DesktopPaths) {
-                    try {
-                        $Dir = Split-Path $Path
-                        if (Test-Path $Dir) {
-                            $Shortcut = $Shell.CreateShortcut($Path)
-                            $Shortcut.TargetPath = $TargetFile
-                            $Shortcut.Arguments = $Arguments
-                            $Shortcut.WorkingDirectory = "C:\Windows\System32"
-                            $Shortcut.IconLocation = "C:\Windows\System32\cmd.exe"
-                            $Shortcut.Description = "Clear Standby List and Working Sets"
-                            $Shortcut.Save()
-
-                            # Set 'Run as Administrator' flag in shortcut byte offset 21
-                            $bytes = [System.IO.File]::ReadAllBytes($Path)
-                            $bytes[21] = $bytes[21] -bor 0x20
-                            [System.IO.File]::WriteAllBytes($Path, $bytes)
-                            
-                            Write-Host "สร้างทางลัดสำเร็จที่: $Path" -ForegroundColor Green
-                        }
-                    }
-                    catch {
-                        Write-Warning "ไม่สามารถสร้างทางลัดที่ $Path ได้: $($_.Exception.Message)"
-                    }
-                }
-                Remove-TempFile
-                Write-Host "`nการดำเนินการเสร็จสิ้น" -ForegroundColor Cyan
+Write-Host "`nScript execution finished." -ForegroundColor Cyan
                 pause
             }
         }
