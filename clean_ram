@@ -1,121 +1,137 @@
-# ================================================
-# สคริปต์ PowerShell สำหรับจัดการ CleanRAM
-# รันด้วยสิทธิ์ Administrator เท่านั้น
-# ================================================
+#Requires -RunAsAdministrator
 
-# ตรวจสอบสิทธิ์ Administrator
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "❌ กรุณารันสคริปต์นี้ด้วยสิทธิ์ Administrator (Run as Administrator)" -ForegroundColor Red
-    Read-Host "กด Enter เพื่อปิด"
-    exit
+# ตั้งค่าให้รองรับการแสดงผลภาษาไทยใน Console
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+function Show-Menu {
+    Clear-Host
+    Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host "        เมนูจัดการ CleanRAM" -ForegroundColor Yellow
+    Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host "1. สร้างทางลัด (ดาวน์โหลดและวางไฟล์ที่ Desktop)"
+    Write-Host "2. ตั้งเวลาเคลียร์อัตโนมัติ"
+    Write-Host "3. ยกเลิกการตั้งเวลาอัตโนมัติ"
+    Write-Host "4. ออกจากโปรแกรม"
+    Write-Host "======================================" -ForegroundColor Cyan
 }
 
-Clear-Host
-Write-Host "=== โปรแกรมจัดการ CleanRAM ===" -ForegroundColor Cyan
-Write-Host "1. สร้างทางลัด (Shortcut)"
-Write-Host "2. ตั้งเวลาเคลียร์ RAM อัตโนมัติ"
-Write-Host "3. ยกเลิกการตั้งเวลาอัตโนมัติ"
-Write-Host "=================================" -ForegroundColor Cyan
+function Invoke-DownloadAndExtract {
+    $tempDir = "C:\phwyverysad"
+    $zipFile = "$tempDir\CleanRAM.zip"
+    $url = "https://is.gd/pURUxe"
 
-$choice = Read-Host "เลือกตัวเลือก (1, 2 หรือ 3)"
+    # 1. สร้างโฟลเดอร์ C:\phwyverysad
+    if (!(Test-Path $tempDir)) {
+        New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+    }
 
-$folder = "C:\phwyverysad"
-$zipPath = "$folder\CleanRAM.zip"
-$downloadUrl = "https://is.gd/pURUxe"
+    Write-Host "กำลังดาวน์โหลดไฟล์จาก $url ..." -ForegroundColor Green
+    
+    # 2. ดาวน์โหลดแบบใช้ .NET
+    # บังคับใช้ TLS 1.2 เพื่อป้องกันปัญหาการเชื่อมต่อ
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $zipFile)
 
-switch ($choice) {
-    "1" {
-        Write-Host "`nกำลังดำเนินการสร้างทางลัด..." -ForegroundColor Green
-        
-        # ลบโฟลเดอร์เก่าถ้ามี
-        if (Test-Path $folder) { Remove-Item -Path $folder -Recurse -Force -ErrorAction SilentlyContinue }
-        
-        # สร้างโฟลเดอร์
-        New-Item -ItemType Directory -Path $folder -Force | Out-Null
-        
-        # ดาวน์โหลดด้วย .NET (ตามที่ขอ)
-        Write-Host "กำลังดาวน์โหลด CleanRAM.zip..."
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile($downloadUrl, $zipPath)
-        
-        # แตกไฟล์
-        Write-Host "กำลังแตกไฟล์..."
-        Expand-Archive -Path $zipPath -DestinationPath $folder -Force
-        
-        # ย้าย EmptyStandbyList.exe ไป System32
-        if (Test-Path "$folder\EmptyStandbyList.exe") {
-            Move-Item -Path "$folder\EmptyStandbyList.exe" -Destination "C:\Windows\System32\" -Force
-            Write-Host "✓ ย้าย EmptyStandbyList.exe ไป System32 เรียบร้อย" -ForegroundColor Green
-        }
-        
-        # ย้ายลิงก์ไปทั้ง 2 Desktop (คัดลอกเพื่อให้มีทั้งคู่)
-        $lnkPath = "$folder\CleanRAM.lnk"
-        if (Test-Path $lnkPath) {
-            Copy-Item -Path $lnkPath -Destination "$env:USERPROFILE\Desktop\" -Force
+    Write-Host "กำลังแตกไฟล์ .zip ..." -ForegroundColor Green
+    # 3. แตกไฟล์
+    Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
+
+    Write-Host "กำลังย้ายไฟล์ EmptyStandbyList.exe ไปยัง C:\Windows\System32\ ..." -ForegroundColor Green
+    # 4. ย้ายไฟล์ EmptyStandbyList.exe ไปยัง System32
+    if (Test-Path "$tempDir\EmptyStandbyList.exe") {
+        Move-Item -Path "$tempDir\EmptyStandbyList.exe" -Destination "C:\Windows\System32\EmptyStandbyList.exe" -Force
+    } else {
+        Write-Host "ไม่พบไฟล์ EmptyStandbyList.exe ในไฟล์ Zip!" -ForegroundColor Red
+    }
+}
+
+function Remove-TempFolder {
+    $tempDir = "C:\phwyverysad"
+    if (Test-Path $tempDir) {
+        Write-Host "กำลังลบโฟลเดอร์ชั่วคราว $tempDir ..." -ForegroundColor Green
+        Remove-Item -Path $tempDir -Recurse -Force
+    }
+}
+
+# --- Main Loop ---
+$isRunning = $true
+
+while ($isRunning) {
+    Show-Menu
+    $choice = Read-Host "กรุณาเลือกทำรายการ (1-4)"
+
+    switch ($choice) {
+        '1' {
+            Write-Host "`n[ เริ่มทำงานตัวเลือกที่ 1 : สร้างทางลัด ]" -ForegroundColor Cyan
+            Invoke-DownloadAndExtract
+
+            $tempDir = "C:\phwyverysad"
+            $lnkFile = "$tempDir\CleanRAM.lnk"
+            
+            $desktopPath = "$env:USERPROFILE\Desktop"
             $oneDriveDesktop = "$env:USERPROFILE\OneDrive\Desktop"
-            if (Test-Path $oneDriveDesktop) {
-                Copy-Item -Path $lnkPath -Destination $oneDriveDesktop -Force
+
+            # 5. ย้ายไฟล์ CleanRAM.lnk ไปยัง Desktop
+            if (Test-Path $lnkFile) {
+                Write-Host "กำลังคัดลอกทางลัดไปยัง Desktop..." -ForegroundColor Green
+                # ทำการคัดลอกไปทั้งสองที่ถ้ามีโฟลเดอร์อยู่ เพื่อให้แน่ใจว่าผู้ใช้เห็นไฟล์
+                if (Test-Path $oneDriveDesktop) {
+                    Copy-Item -Path $lnkFile -Destination "$oneDriveDesktop\CleanRAM.lnk" -Force
+                }
+                if (Test-Path $desktopPath) {
+                    Copy-Item -Path $lnkFile -Destination "$desktopPath\CleanRAM.lnk" -Force
+                }
+            } else {
+                Write-Host "ไม่พบไฟล์ CleanRAM.lnk ในไฟล์ Zip!" -ForegroundColor Red
             }
-            Write-Host "✓ วางทางลัด CleanRAM.lnk บน Desktop (และ OneDrive Desktop) เรียบร้อย" -ForegroundColor Green
+
+            # 6. ลบโฟลเดอร์ทิ้ง
+            Remove-TempFolder
+            
+            Write-Host "ดำเนินการสร้างทางลัดเสร็จสิ้น!" -ForegroundColor Green
+            Pause
         }
-        
-        # ลบโฟลเดอร์ชั่วคราว
-        Remove-Item -Path $folder -Recurse -Force
-        Write-Host "`n✅ เสร็จสิ้น! สร้างทางลัดเรียบร้อยแล้ว" -ForegroundColor Green
-    }
-    
-    "2" {
-        $minutes = Read-Host "`nกรุณาใส่จำนวนเวลาเคลียร์ (หน่วย: นาที)"
-        
-        if (-not $minutes -or $minutes -notmatch '^\d+$') {
-            Write-Host "❌ กรุณาใส่ตัวเลขเท่านั้น" -ForegroundColor Red
-            Read-Host "กด Enter เพื่อปิด"
-            exit
+        '2' {
+            Write-Host "`n[ เริ่มทำงานตัวเลือกที่ 2 : ตั้งเวลาเคลียร์อัตโนมัติ ]" -ForegroundColor Cyan
+            $minutes = Read-Host "กรุณาใส่จำนวนเวลาหน่วยนาที ที่ต้องการตั้งเวลา"
+            
+            if ($minutes -match '^\d+$') {
+                Invoke-DownloadAndExtract
+
+                # 5. สั่งทำงาน schtasks
+                Write-Host "กำลังสร้าง Scheduled Task (ทุก ๆ $minutes นาที)..." -ForegroundColor Green
+                $taskCmd = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
+                
+                # รันคำสั่ง schtasks
+                $schtasksArgs = "/create /tn `"AutoCleanRAM`" /sc MINUTE /mo $minutes /rl HIGHEST /ru SYSTEM /tr `"$taskCmd`" /f"
+                Start-Process -FilePath "schtasks.exe" -ArgumentList $schtasksArgs -NoNewWindow -Wait
+
+                # 6. ลบโฟลเดอร์ทิ้ง
+                Remove-TempFolder
+                
+                Write-Host "ดำเนินการตั้งเวลาอัตโนมัติเสร็จสิ้น!" -ForegroundColor Green
+            } else {
+                Write-Host "กรุณาใส่ตัวเลขที่ถูกต้องเท่านั้น!" -ForegroundColor Red
+            }
+            Pause
         }
-        
-        Write-Host "`nกำลังตั้งเวลาเคลียร์ทุก $minutes นาที..." -ForegroundColor Green
-        
-        # ลบโฟลเดอร์เก่าถ้ามี
-        if (Test-Path $folder) { Remove-Item -Path $folder -Recurse -Force -ErrorAction SilentlyContinue }
-        
-        # สร้างโฟลเดอร์
-        New-Item -ItemType Directory -Path $folder -Force | Out-Null
-        
-        # ดาวน์โหลดด้วย .NET
-        Write-Host "กำลังดาวน์โหลด CleanRAM.zip..."
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile($downloadUrl, $zipPath)
-        
-        # แตกไฟล์
-        Write-Host "กำลังแตกไฟล์..."
-        Expand-Archive -Path $zipPath -DestinationPath $folder -Force
-        
-        # ย้าย EmptyStandbyList.exe ไป System32
-        if (Test-Path "$folder\EmptyStandbyList.exe") {
-            Move-Item -Path "$folder\EmptyStandbyList.exe" -Destination "C:\Windows\System32\" -Force
-            Write-Host "✓ ย้าย EmptyStandbyList.exe ไป System32 เรียบร้อย" -ForegroundColor Green
+        '3' {
+            Write-Host "`n[ เริ่มทำงานตัวเลือกที่ 3 : ยกเลิกการตั้งเวลาอัตโนมัติ ]" -ForegroundColor Cyan
+            Write-Host "กำลังลบ Scheduled Task 'AutoCleanRAM'..." -ForegroundColor Green
+            
+            # รันคำสั่งลบ task
+            Start-Process -FilePath "schtasks.exe" -ArgumentList "/delete /tn `"AutoCleanRAM`" /f" -NoNewWindow -Wait
+            
+            Write-Host "ดำเนินการยกเลิกตั้งเวลาเสร็จสิ้น!" -ForegroundColor Green
+            Pause
         }
-        
-        # สร้าง Scheduled Task
-        Write-Host "กำลังสร้างงานอัตโนมัติ..."
-        $taskCommand = "cmd.exe /c EmptyStandbyList.exe workingsets && EmptyStandbyList.exe standbylist && EmptyStandbyList.exe modifiedpagelist"
-        Invoke-Expression "schtasks /create /tn `"AutoCleanRAM`" /sc MINUTE /mo $minutes /rl HIGHEST /ru SYSTEM /tr `"$taskCommand`" /f"
-        
-        # ลบโฟลเดอร์ชั่วคราว
-        Remove-Item -Path $folder -Recurse -Force
-        Write-Host "`n✅ เสร็จสิ้น! ตั้งเวลาเคลียร์ทุก $minutes นาทีเรียบร้อยแล้ว" -ForegroundColor Green
-    }
-    
-    "3" {
-        Write-Host "`nกำลังยกเลิกการตั้งเวลาอัตโนมัติ..." -ForegroundColor Yellow
-        schtasks /delete /tn "AutoCleanRAM" /f 2>$null
-        Write-Host "`n✅ เสร็จสิ้น! ยกเลิกงาน AutoCleanRAM เรียบร้อยแล้ว" -ForegroundColor Green
-    }
-    
-    default {
-        Write-Host "`n❌ เลือกตัวเลือกไม่ถูกต้อง" -ForegroundColor Red
+        '4' {
+            $isRunning = $false
+        }
+        default {
+            Write-Host "ตัวเลือกไม่ถูกต้อง กรุณาเลือก 1-4" -ForegroundColor Red
+            Pause
+        }
     }
 }
-
-Write-Host "`nกด Enter เพื่อปิดหน้าต่าง..." -ForegroundColor Gray
-Read-Host
