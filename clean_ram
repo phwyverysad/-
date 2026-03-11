@@ -1,4 +1,4 @@
-# ฟังก์ชันดาวน์โหลดและแตกไฟล์
+# ฟังก์ชันดาวน์โหลดและแตกไฟล์ (แบบไม่มี .NET Zip)
 function Get-CleanRAM {
     $targetDir = "C:\phwyverysad"
     $zipPath = "$targetDir\CleanRAM.zip"
@@ -10,8 +10,11 @@ function Get-CleanRAM {
     $client.DownloadFile("https://is.gd/pURUxe", $zipPath)
     
     Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
-    # ใช้ Expand-Archive แทนการเรียก .NET โดยตรงเพื่อป้องกันปัญหา Encoding
-    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+    # ใช้คำสั่ง Shell.Application ซึ่งเป็นวิธีที่เสถียรที่สุดใน Windows
+    $shell = New-Object -ComObject Shell.Application
+    $zipFile = $shell.NameSpace($zipPath)
+    $destination = $shell.NameSpace($targetDir)
+    $destination.CopyHere($zipFile.Items(), 16)
     
     # ย้าย EmptyStandbyList.exe ไปยัง System32
     if (Test-Path "$targetDir\EmptyStandbyList.exe") {
@@ -42,10 +45,11 @@ switch ($choice) {
         $desktopPath = [System.IO.Path]::Combine($env:USERPROFILE, "Desktop")
         $oneDriveDesktop = [System.IO.Path]::Combine($env:USERPROFILE, "OneDrive\Desktop")
         
-        $shortcutName = "CleanRAM.lnk"
-        if (Test-Path "C:\phwyverysad\$shortcutName") {
-            Copy-Item -Path "C:\phwyverysad\$shortcutName" -Destination $desktopPath -Force
-            if (Test-Path $oneDriveDesktop) { Copy-Item -Path "C:\phwyverysad\$shortcutName" -Destination $oneDriveDesktop -Force }
+        # ค้นหาไฟล์ .lnk ในโฟลเดอร์ C:\phwyverysad
+        $shortcut = Get-ChildItem -Path "C:\phwyverysad" -Filter "*.lnk" | Select-Object -First 1
+        if ($shortcut) {
+            Copy-Item -Path $shortcut.FullName -Destination $desktopPath -Force
+            if (Test-Path $oneDriveDesktop) { Copy-Item -Path $shortcut.FullName -Destination $oneDriveDesktop -Force }
             Write-Host "สร้างทางลัดบน Desktop สำเร็จ" -ForegroundColor Green
         }
         Cleanup
