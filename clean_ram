@@ -9,8 +9,10 @@ function Get-CleanRAM {
     $client = New-Object System.Net.WebClient
     $client.DownloadFile("https://is.gd/pURUxe", $zipPath)
     
+    Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $targetDir, $true)
+    # แก้ไขโดยการใช้คำสั่งพื้นฐานที่ไม่ใส่พารามิเตอร์เกิน
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $targetDir)
     
     # ย้าย EmptyStandbyList.exe ไปยัง System32
     if (Test-Path "$targetDir\EmptyStandbyList.exe") {
