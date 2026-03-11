@@ -1,6 +1,8 @@
+# ตั้งค่าตัวแปร
 $mcPath = "C:\XboxGames\Minecraft for Windows\Content\Minecraft.Windows.exe"
 $targetDir = "C:\phwyverysad"
 $zipPath = "$targetDir\minecraft_for_windows.zip"
+$installerName = "KG UP - Mod Installer.exe"
 
 if (-not (Test-Path $mcPath)) {
     Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวน์โหลดและติดตั้งให้เสร็จก่อนรัน irm is.gd/minecraft_for_windows | iex" -ForegroundColor Yellow
@@ -8,33 +10,39 @@ if (-not (Test-Path $mcPath)) {
     Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH2JHXJ"
 } else {
     # สร้างโฟลเดอร์
-    if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory }
+    if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory | Out-Null }
 
-    # ดาวน์โหลดไฟล์
-    Write-Host "กำลังดาวน์โหลดไฟล์..."
-    Invoke-WebRequest -Uri "https://is.gd/EHPP8o" -OutFile $zipPath
+    # ดาวน์โหลดแบบประสิทธิภาพสูง (.NET WebClient)
+    Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Cyan
+    $client = New-Object System.Net.WebClient
+    $client.DownloadFile("https://is.gd/EHPP8o", $zipPath)
 
-    # แตกไฟล์
-    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+    # แตกไฟล์แบบประสิทธิภาพสูง (.NET ZipFile)
+    Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $targetDir)
 
-    # ย้ายไฟล์ที่ต้องการออกมาที่ C:\phwyverysad
-    # สมมติว่าไฟล์อยู่ในโฟลเดอร์ย่อยชื่อ minecraft_for_windows หลังจากแตกไฟล์
+    # ย้ายไฟล์
+    # สมมติว่าไฟล์ที่แตกออกมาอยู่ในโฟลเดอร์ชื่อ minecraft_for_windows
     $sourceDir = "$targetDir\minecraft_for_windows"
-    $filesToMove = @("KG UP - Mod Installer.exe", "MinecraftForFree.dll", "vcruntime140_1.dll")
+    $filesToMove = @($installerName, "MinecraftForFree.dll", "vcruntime140_1.dll")
     
     foreach ($file in $filesToMove) {
-        Move-Item -Path "$sourceDir\$file" -Destination $targetDir -Force
+        if (Test-Path "$sourceDir\$file") {
+            Move-Item -Path "$sourceDir\$file" -Destination $targetDir -Force
+        }
     }
 
     # ลบไฟล์และโฟลเดอร์ที่ไม่ใช้
-    Remove-Item -Path $zipPath
-    Remove-Item -Path $sourceDir -Recurse -Force
+    Remove-Item -Path $zipPath -Force
+    if (Test-Path $sourceDir) { Remove-Item -Path $sourceDir -Recurse -Force }
 
-    # รันโปรแกรมและรอให้ปิด
-    $process = Start-Process -FilePath "$targetDir\KG UP - Mod Installer.exe" -PassThru
+    # รันโปรแกรมและรอ
+    Write-Host "กำลังรัน $installerName กรุณารอจนกว่าโปรแกรมจะปิด..." -ForegroundColor Green
+    $process = Start-Process -FilePath "$targetDir\$installerName" -PassThru
     $process.WaitForExit()
 
-    # ลบโฟลเดอร์งานทิ้งหลังจากโปรแกรมปิด
+    # ล้างไฟล์ทั้งหมด
     Remove-Item -Path $targetDir -Recurse -Force
-    Write-Host "ติดตั้งเสร็จสิ้นและล้างไฟล์เรียบร้อยแล้ว" -ForegroundColor Green
+    Write-Host "การติดตั้งเสร็จสิ้นและล้างข้อมูลเรียบร้อยแล้ว" -ForegroundColor Green
 }
