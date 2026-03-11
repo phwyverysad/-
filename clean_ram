@@ -34,21 +34,28 @@ function Invoke-DownloadAndExtract {
     Write-Host "กำลังดาวน์โหลดไฟล์โดยใช้ .NET (WebClient)..." -ForegroundColor Green
     
     try {
-        # ตั้งค่าการเชื่อมต่อแบบ .NET
+        # ตั้งค่าความปลอดภัย TLS 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
         
-        # ดาวน์โหลดไปยังโฟลเดอร์ที่กำหนด
+        # เพิ่ม User-Agent เพื่อป้องกัน Server ปฏิเสธการดาวน์โหลด
+        $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        
+        # ดาวน์โหลดไฟล์
         $webClient.DownloadFile($url, $zipFile)
 
-        if (!(Test-Path $zipFile) -or (Get-Item $zipFile).Length -lt 1024) {
-            Write-Host "ไฟล์ที่ดาวน์โหลดมาไม่ถูกต้อง ลิงก์อาจจะเสีย" -ForegroundColor Red
+        # ตรวจสอบขนาดไฟล์ ถ้าเล็กเกินไป (เช่น น้อยกว่า 10KB) แสดงว่าลิงก์อาจถูก Redirect ไปหน้าอื่น
+        if (!(Test-Path $zipFile) -or (Get-Item $zipFile).Length -lt 10240) {
+            Write-Host "ไฟล์ที่ดาวน์โหลดมาไม่สมบูรณ์ (ขนาดเล็กเกินไป) ลิงก์อาจมีการเปลี่ยนแปลงหรือถูกระงับ" -ForegroundColor Red
             return $false
         }
 
         Write-Host "ดาวน์โหลดสำเร็จ กำลังแตกไฟล์..." -ForegroundColor Green
         
-        # แตกไฟล์ Zip
+        # หน่วงเวลาเล็กน้อยให้ OS เคลียร์ File Stream
+        Start-Sleep -Seconds 1
+        
+        # แตกไฟล์ Zip ด้วยโหมด Force
         Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
 
         # ย้ายไฟล์ EmptyStandbyList.exe ไปยัง System32
@@ -61,6 +68,9 @@ function Invoke-DownloadAndExtract {
         }
     } catch {
         Write-Host "เกิดข้อผิดพลาด: $($_.Exception.Message)" -ForegroundColor Red
+        if ($_.Exception.Message -like "*Central Directory*") {
+            Write-Host "คำแนะนำ: ไฟล์ Zip เสียหายหรือดาวน์โหลดไม่สมบูรณ์ กรุณาตรวจสอบความเร็วอินเทอร์เน็ตหรือลิงก์ต้นทาง" -ForegroundColor Yellow
+        }
         return $false
     }
     return $true
@@ -69,7 +79,9 @@ function Invoke-DownloadAndExtract {
 function Remove-TempFolder {
     $tempDir = "C:\phwyverysad"
     if (Test-Path $tempDir) {
-        Remove-Item -Path $tempDir -Recurse -Force
+        # ลบไฟล์ Zip ก่อนแล้วค่อยลบโฟลเดอร์เพื่อลดโอกาสเกิดปัญหา Access Denied
+        Get-ChildItem -Path $tempDir -Recurse | Remove-Item -Force
+        Remove-Item -Path $tempDir -Force
         Write-Host "ลบโฟลเดอร์ชั่วคราว C:\phwyverysad เรียบร้อย" -ForegroundColor Gray
     }
 }
@@ -86,7 +98,6 @@ while ($isRunning) {
                 $tempDir = "C:\phwyverysad"
                 $lnkFile = "$tempDir\CleanRAM.lnk"
                 
-                # กำหนดที่อยู่ Desktop ทั้งหมดที่ควรจะเป็นไปได้
                 $desktops = @("$env:USERPROFILE\Desktop", "$env:USERPROFILE\OneDrive\Desktop")
 
                 if (Test-Path $lnkFile) {
