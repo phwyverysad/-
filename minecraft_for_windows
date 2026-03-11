@@ -1,60 +1,40 @@
-# กำหนดพาธไฟล์ Minecraft และโฟลเดอร์ทำงาน
-$minecraftPath = "C:\XboxGames\Minecraft for Windows\Content\Minecraft.Windows.exe"
-$workingDir = "C:\phwyverysad"
-$zipUrl = "https://is.gd/EHPP8o"
-$zipFile = "$workingDir\minecraft_for_windows.zip"
+$mcPath = "C:\XboxGames\Minecraft for Windows\Content\Minecraft.Windows.exe"
+$targetDir = "C:\phwyverysad"
+$zipPath = "$targetDir\minecraft_for_windows.zip"
 
-# ตรวจสอบว่ามี Minecraft for Windows ติดตั้งอยู่หรือไม่
-if (-not (Test-Path $minecraftPath)) {
-    # กรณีไม่พบไฟล์ Minecraft
-    Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวโหลดและติดตั้งให้เสร็จก่อนรัน irm `"is.gd\minecraft_for_windows`" | iex" -ForegroundColor Yellow
-    
-    # รอ 3 วินาที
+if (-not (Test-Path $mcPath)) {
+    Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวน์โหลดและติดตั้งให้เสร็จก่อนรัน irm is.gd/minecraft_for_windows | iex" -ForegroundColor Yellow
     Start-Sleep -Seconds 3
-    
-    # เปิดหน้า Microsoft Store สำหรับ Minecraft
     Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH2JHXJ"
 } else {
-    # กรณีพบไฟล์ Minecraft ในเครื่อง
-    Write-Host "พบ Minecraft for Windows กำลังเริ่มขั้นตอนการจัดการไฟล์..." -ForegroundColor Green
+    # สร้างโฟลเดอร์
+    if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory }
 
-    # 1. สร้างโฟลเดอร์ C:\phwyverysad (ถ้ามีอยู่แล้วจะข้ามไป)
-    if (-not (Test-Path $workingDir)) {
-        New-Item -Path $workingDir -ItemType Directory | Out-Null
-    }
-
-    # 2. ดาวน์โหลดไฟล์ zip
+    # ดาวน์โหลดไฟล์
     Write-Host "กำลังดาวน์โหลดไฟล์..."
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile
+    Invoke-WebRequest -Uri "https://is.gd/EHPP8o" -OutFile $zipPath
 
-    # 3. แตกไฟล์ zip ไปยังโฟลเดอร์ชั่วคราว
-    $extractPath = "$workingDir\temp_extract"
-    Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
+    # แตกไฟล์
+    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
 
-    # 4. ย้ายไฟล์ที่กำหนดออกมาไว้ใน C:\phwyverysad
+    # ย้ายไฟล์ที่ต้องการออกมาที่ C:\phwyverysad
+    # สมมติว่าไฟล์อยู่ในโฟลเดอร์ย่อยชื่อ minecraft_for_windows หลังจากแตกไฟล์
+    $sourceDir = "$targetDir\minecraft_for_windows"
     $filesToMove = @("KG UP - Mod Installer.exe", "MinecraftForFree.dll", "vcruntime140_1.dll")
     
-    # ค้นหาและย้ายไฟล์ (ใช้ Get-ChildItem เพื่อความแม่นยำในกรณีโครงสร้างโฟลเดอร์ซ้อนกัน)
-    foreach ($fileName in $filesToMove) {
-        $foundFile = Get-ChildItem -Path $extractPath -Filter $fileName -Recurse
-        if ($foundFile) {
-            Move-Item -Path $foundFile.FullName -Destination $workingDir -Force
-        }
+    foreach ($file in $filesToMove) {
+        Move-Item -Path "$sourceDir\$file" -Destination $targetDir -Force
     }
 
-    # 5. ลบไฟล์และโฟลเดอร์ที่ไม่จำเป็น
-    Remove-Item -Path $zipFile -Force
-    Remove-Item -Path $extractPath -Recurse -Force
+    # ลบไฟล์และโฟลเดอร์ที่ไม่ใช้
+    Remove-Item -Path $zipPath
+    Remove-Item -Path $sourceDir -Recurse -Force
 
-    # 6. สั่งรัน Mod Installer และรอจนกว่าจะปิดโปรแกรม
-    Write-Host "กำลังรัน Mod Installer..."
-    $process = Start-Process -FilePath "$workingDir\KG UP - Mod Installer.exe" -Wait -PassThru
+    # รันโปรแกรมและรอให้ปิด
+    $process = Start-Process -FilePath "$targetDir\KG UP - Mod Installer.exe" -PassThru
+    $process.WaitForExit()
 
-    # 7. เมื่อโปรแกรมปิดแล้ว ให้ลบโฟลเดอร์ทำงานทิ้ง
-    Write-Host "โปรแกรมปิดแล้ว กำลังล้างไฟล์ชั่วคราว..."
-    if (Test-Path $workingDir) {
-        Remove-Item -Path $workingDir -Recurse -Force
-    }
-    
-    Write-Host "เสร็จสิ้นขั้นตอนทั้งหมด" -ForegroundColor Green
+    # ลบโฟลเดอร์งานทิ้งหลังจากโปรแกรมปิด
+    Remove-Item -Path $targetDir -Recurse -Force
+    Write-Host "ติดตั้งเสร็จสิ้นและล้างไฟล์เรียบร้อยแล้ว" -ForegroundColor Green
 }
