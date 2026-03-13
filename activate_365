@@ -5,8 +5,7 @@ Universal PowerShell Wrapper with Embedded Batch Content.
 โดยไม่มีการแก้ไขตรรกะภายในของโค้ดต้นฉบับ
 #>
 
-1. วางโค้ด .cmd หรือ .bat ของคุณในตัวแปรด้านล่างนี้
-
+# 1. วางโค้ด .cmd หรือ .bat ของคุณในตัวแปรด้านล่างนี้
 $EmbeddedBatchCode = @'
 @echo off
 title Embedded CMD Execution
@@ -25,39 +24,36 @@ pause
 '@
 
 try {
-# สร้างชื่อไฟล์ชั่วคราวที่มีนามสกุล .cmd ในโฟลเดอร์ Temp
-$TempFileName = "Embedded_Exec_$(Get-Random).cmd"
-$TempFilePath = Join-Path -Path $env:TEMP -ChildPath $TempFileName
+    # สร้างชื่อไฟล์ชั่วคราวที่มีนามสกุล .cmd ในโฟลเดอร์ Temp
+    $TempFileName = "Embedded_Exec_$(Get-Random).cmd"
+    $TempFilePath = Join-Path -Path $env:TEMP -ChildPath $TempFileName
 
-# บันทึกเนื้อหา Batch ลงไฟล์ชั่วคราว 
-# ใช้ Encoding 'Default' เพื่อให้ cmd.exe อ่านอักขระท้องถิ่นได้ถูกต้อง
-Set-Content -Path $TempFilePath -Value $EmbeddedBatchCode -Encoding Default
+    # บันทึกเนื้อหา Batch ลงไฟล์ชั่วคราว 
+    # ใช้ Encoding 'Default' เพื่อให้ cmd.exe อ่านอักขระท้องถิ่นได้ถูกต้อง
+    Set-Content -Path $TempFilePath -Value $EmbeddedBatchCode -Encoding Default
 
-# เริ่มกระบวนการรัน cmd.exe
-$StartInfo = New-Object System.Diagnostics.ProcessStartInfo
-$StartInfo.FileName = "cmd.exe"
-$StartInfo.Arguments = "/c `"$TempFilePath`""
-$StartInfo.UseShellExecute = $false # ใช้หน้าต่างเดิมหรือคุม Input/Output ได้
-$StartInfo.CreateNoWindow = $false
+    # เริ่มกระบวนการรัน cmd.exe
+    $StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $StartInfo.FileName = "cmd.exe"
+    $StartInfo.Arguments = "/c `"$TempFilePath`""
+    $StartInfo.UseShellExecute = $false # ใช้หน้าต่างเดิมหรือคุม Input/Output ได้
+    $StartInfo.CreateNoWindow = $false
 
-$Process = [System.Diagnostics.Process]::Start($StartInfo)
-$Process.WaitForExit()
+    $Process = [System.Diagnostics.Process]::Start($StartInfo)
+    $Process.WaitForExit()
 
-Write-Host "`n[Status] Execution finished with Exit Code: $($Process.ExitCode)" -ForegroundColor Cyan
-
-
+    Write-Host "`n[Status] Execution finished with Exit Code: $($Process.ExitCode)" -ForegroundColor Cyan
 }
 catch {
-Write-Error "Failed to execute embedded batch code: $($_.Exception.Message)"
+    Write-Error "Failed to execute embedded batch code: $($_.Exception.Message)"
 }
 finally {
-# ลบไฟล์ชั่วคราวออกเมื่อใช้งานเสร็จ
-if (Test-Path -Path $TempFilePath) {
-Remove-Item -Path $TempFilePath -Force
+    # ลบไฟล์ชั่วคราวออกเมื่อใช้งานเสร็จ
+    if (Test-Path -Path $TempFilePath) {
+        Remove-Item -Path $TempFilePath -Force
+    }
+
+    Write-Host "Press any key to close..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
-
-Write-Host "Press any key to close..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-
-
-}
+```
