@@ -1,6 +1,8 @@
-<#
-.SYNOPSIS
-Universal PowerShell Wrapper with Embedded Batch Content.
+<# :
+@echo off
+setlocal
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((Get-Content '%~f0' -Raw) -replace '^[\s\S]?$EmbeddedBatchCode = @''','' -replace ''''@[\s\S]$',''))"
+exit /b
 #>
 
 $EmbeddedBatchCode = @'
@@ -3392,21 +3394,19 @@ M--u-D----BE-----QBW-GE-cgBG-Gk-b-Bl-Ek-bgBm-G8------CQ-B----FQ-cgBh-G4-cwBs-GE-
 
 ::========================================================================================================================================
 :: Leave empty line below
+
 '@
 
 try {
-    $TempFilePath = Join-Path -Path $env:TEMP -ChildPath "Embedded_Exec_$(Get-Random).cmd"
-    
-    Set-Content -Path $TempFilePath -Value $EmbeddedBatchCode -Encoding Default
-
-    $Process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$TempFilePath`"" -Wait -NoNewWindow -PassThru
+$TempFilePath = Join-Path -Path $env:TEMP -ChildPath "Embedded_Exec_$(Get-Random).cmd"
+Set-Content -Path $TempFilePath -Value $EmbeddedBatchCode -Encoding Default
+$Process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c "$TempFilePath"" -Wait -NoNewWindow -PassThru
 }
 catch {
-    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
 }
 finally {
-    if (Test-Path -Path $TempFilePath) {
-        Remove-Item -Path $TempFilePath -Force
-    }
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+if (Test-Path -Path $TempFilePath) {
+Remove-Item -Path $TempFilePath -Force
+}
 }
