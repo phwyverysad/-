@@ -34,7 +34,8 @@ function Download-And-Install {
     # ถอดรหัส URL ของ .NET (Thank you page) เพื่อดึงลิงก์ .exe ตรง
     if ($url -match "thank-you") {
         try {
-            $html = [System.Net.WebClient]::new().DownloadString($url)
+            $webClient = New-Object System.Net.WebClient
+            $html = $webClient.DownloadString($url)
             if ($html -match 'href="([^"]+\.exe)"') {
                 $url = $matches[1]
             }
@@ -70,7 +71,10 @@ function Download-And-Install {
         }
         Write-Host "[+] ติดตั้ง $fileName สำเร็จ`n" -ForegroundColor Green
     } catch {
-        Write-Host "[-] เกิดข้อผิดพลาดใน $fileName: $($_.Exception.Message)`n" -ForegroundColor Red
+        # แก้ไขจุดที่ทำให้เกิด Parser Error โดยใช้ ${} และแยก String ออกจาก Variable
+        $errMsg = $_.Exception.Message
+        Write-Host "[-] เกิดข้อผิดพลาดใน ${fileName}: ${errMsg}" -ForegroundColor Red
+        Write-Host ""
     }
 }
 
