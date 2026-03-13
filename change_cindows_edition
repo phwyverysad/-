@@ -53,7 +53,7 @@ if (-not $args) {
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 
     $URLs = @(
-        'https://raw.githubusercontent.com/plathx/-/refs/heads/main/change_cindows_edition%20script'
+        'https://raw.githubusercontent.com/plathx/-/refs/heads/main/%5B1%5D%20HWID%20%E2%80%93%20Windows.txt'
     )
     Write-Progress -Activity "Downloading..." -Status "Please wait"
     $errors = @()
