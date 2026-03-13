@@ -1,12 +1,19 @@
 <#
 .SYNOPSIS
-Universal PowerShell Wrapper for Remote Execution (irm | iex)
-This script executes embedded Batch/CMD code directly from memory/temp file.
+    Universal PowerShell Wrapper for Remote Execution (irm | iex)
+    This script executes embedded Batch/CMD code directly from memory/temp file.
 #>
 
-1. ใส่โค้ด .cmd หรือ .bat ของคุณที่นี่
-
+# 1. ใส่โค้ด .cmd หรือ .bat ของคุณที่นี่
 $EmbeddedBatchCode = @'
+@echo off
+echo ====================================================
+echo  Running Embedded Batch Script via PowerShell IEX
+echo ====================================================
+echo.
+echo Current User: %username%
+echo Current Dir:  %cd%
+echo.
 @echo off
 setlocal EnableDelayedExpansion
 title OS Playbook Downloader
@@ -148,35 +155,36 @@ if exist "%LAST_FILE%" (
 )
 
 exit
+ipconfig | findstr /i "IPv4"
+
+echo.
+echo ====================================================
+pause
 '@
 
-2. ฟังก์ชันหลักสำหรับรันโค้ด
-
+# 2. ฟังก์ชันหลักสำหรับรันโค้ด
 $ExecuteWrapper = {
-param($BatchContent)
+    param($BatchContent)
 
-$TempFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "run_$([System.Guid]::NewGuid().ToString('n')).cmd")
+    $TempFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "run_$([System.Guid]::NewGuid().ToString('n')).cmd")
 
-try {
-    # บันทึกไฟล์ด้วย Encoding ที่ CMD รองรับ (Default/OEM)
-    Set-Content -Path $TempFilePath -Value $BatchContent -Encoding Default
-    
-    # รันไฟล์ CMD
-    $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$TempFilePath`"" -Wait -NoNewWindow -PassThru
-    return $proc.ExitCode
-}
-catch {
-    Write-Error "Failed to execute batch content: $($_.Exception.Message)"
-}
-finally {
-    if (Test-Path -Path $TempFilePath) {
-        Remove-Item -Path $TempFilePath -Force
+    try {
+        # บันทึกไฟล์ด้วย Encoding ที่ CMD รองรับ (Default/OEM)
+        Set-Content -Path $TempFilePath -Value $BatchContent -Encoding Default
+        
+        # รันไฟล์ CMD
+        $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$TempFilePath`"" -Wait -NoNewWindow -PassThru
+        return $proc.ExitCode
+    }
+    catch {
+        Write-Error "Failed to execute batch content: $($_.Exception.Message)"
+    }
+    finally {
+        if (Test-Path -Path $TempFilePath) {
+            Remove-Item -Path $TempFilePath -Force
+        }
     }
 }
 
-
-}
-
-3. ตรวจสอบการรันแบบ IEX และเรียกใช้งาน
-
+# 3. ตรวจสอบการรันแบบ IEX และเรียกใช้งาน
 & $ExecuteWrapper -BatchContent $EmbeddedBatchCode
