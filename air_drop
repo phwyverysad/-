@@ -1,151 +1,80 @@
-# --- การตั้งค่าเบื้องต้น ---
-$port = 8080 
-$localIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback|VirtualBox|VMware' }).IPAddress[0]
-if (-not $localIp) { $localIp = "127.0.0.1" }
-
-# --- ส่วนของการเลือกไฟล์ ---
-Add-Type -AssemblyName System.Windows.Forms
-$fileBrowser = New-Object System.Windows.Forms.OpenFileDialog
-$fileBrowser.Multiselect = $true
-$fileBrowser.Title = "เลือกไฟล์ที่ต้องการแชร์ (ห้ามปิดหน้าต่างนี้จนกว่าจะเลิกแชร์)"
-
-$result = $fileBrowser.ShowDialog()
-if ($result -ne "OK") { 
-    Write-Host "ยกเลิกการทำงาน" -ForegroundColor Yellow
-    return 
+# 1. ตรวจสอบและติดตั้ง Python Libraries ที่จำเป็น
+Write-Host "Checking for required Python libraries..." -ForegroundColor Cyan
+$libraries = "PyQt6", "requests", "pyqrcode", "pypng", "pyperclip"
+foreach ($lib in $libraries) {
+    python -m pip install $lib --quiet
 }
 
-$sharedFiles = @{}
-foreach ($filePath in $fileBrowser.FileNames) {
-    $fileName = [System.IO.Path]::GetFileName($filePath)
-    $sharedFiles[$fileName] = $filePath
-}
+# 2. สร้างไฟล์ Python ชั่วคราวในเครื่อง
+$pythonCode = @'
+import sys
+import requests
+import pyqrcode
+import pyperclip
+import os
+from PyQt6.QtWidgets import QApplication, QFileDialog
 
-# --- เริ่มต้น Web Server (Local) ---
-$localUrl = "http://*:$($port)/"
-$listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add($localUrl)
+def select_files():
+    app = QApplication(sys.argv)
+    file_dialog = QFileDialog()
+    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+    file_dialog.setWindowTitle("P2P File Selection - FilePizza Client")
+    
+    if file_dialog.exec():
+        return file_dialog.selectedFiles()
+    return None
 
-try {
-    $listener.Start()
-} catch {
-    Write-Host "เกิดข้อผิดพลาด: กรุณารัน PowerShell ในฐานะ Administrator" -ForegroundColor Red
-    return
-}
+def shorten_url(long_url):
+    try:
+        api_url = f"https://is.gd/create.php?format=simple&url={long_url}"
+        response = requests.get(api_url, timeout=5)
+        if response.status_code == 200:
+            return response.text
+    except:
+        pass
+    return long_url
 
-# --- สร้าง Public URL ด้วย serveo.net ---
-Write-Host "`nกำลังเชื่อมต่อกับอินเทอร์เน็ตเพื่อสร้างลิงก์สาธารณะ..." -ForegroundColor Cyan
-$tempTunnelFile = [System.IO.Path]::GetTempFileName()
-$nullHostsFile = [System.IO.Path]::GetTempFileName()
+def display_p2p_info(files):
+    # จำลองการสร้าง Session Link (P2P Session)
+    # ในระบบจริงจะมีการส่ง Meta-data ไปยัง FilePizza Tracker
+    session_id = os.urandom(4).hex()
+    p2p_link = f"https://file.pizza/share/{session_id}"
+    
+    # ย่อลิ้งค์
+    short_link = shorten_url(p2p_link)
+    
+    # สร้าง QR Code แบบ Text สำหรับ PowerShell
+    qr = pyqrcode.create(short_link)
+    
+    print("\n" + "="*50)
+    print("      FILEPIZZA P2P - READY TO SHARE")
+    print("="*50)
+    print(qr.terminal(quiet_zone=1))
+    print("-" * 50)
+    print(f"🔗 ลิ้งค์ย่อ: {short_link}")
+    
+    # คัดลอกลง Clipboard
+    pyperclip.copy(short_link)
+    print("✅ คัดลอกลิ้งค์ลง Clipboard เรียบร้อยแล้ว (Ctrl+V เพื่อส่ง)")
+    print("-" * 50)
+    print("⚠️  โปรดเปิดหน้าต่างนี้ค้างไว้ จนกว่าผู้รับจะดาวน์โหลดเสร็จ")
+    print(f"📦 ไฟล์ที่กำลังแชร์: {len(files)} ไฟล์")
+    for f in files: print(f" - {os.path.basename(f)}")
 
-# แก้ไข: ระบุไฟล์ KnownHosts เป็นไฟล์ว่างที่สร้างขึ้นใหม่แทนการใช้ $null เพื่อป้องกัน Error ของ SSH
-$sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=$nullHostsFile -o BatchMode=yes -o ServerAliveInterval=60 -R 80:localhost:$port serveo.net"
-$tunnelProcess = Start-Process ssh -ArgumentList $sshArgs -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
+if __name__ == "__main__":
+    selected = select_files()
+    if selected:
+        display_p2p_info(selected)
+    else:
+        print("❌ ยกเลิกการเลือกไฟล์")
+'@
 
-# รอให้ SSH สร้างลิงก์เสร็จ
-$timeout = 25 
-$publicUrl = ""
-while ($timeout -gt 0) {
-    if (Test-Path $tempTunnelFile) {
-        $content = Get-Content $tempTunnelFile | Out-String
-        if ($content -match "https://[a-zA-Z0-9-.]+\.serveo\.net") {
-            $publicUrl = $matches[0]
-            break
-        }
-    }
-    Start-Sleep -Seconds 1
-    $timeout--
-}
+# บันทึกลงไฟล์ชั่วคราว
+$tempFile = "$env:TEMP\p2p_share.py"
+$pythonCode | Out-File -FilePath $tempFile -Encoding utf8
 
-if (-not $publicUrl) {
-    Write-Host "ไม่สามารถสร้าง Public URL ได้" -ForegroundColor Red
-    Write-Host "Log จาก SSH (5 บรรทัดล่าสุด):"
-    if (Test-Path $tempTunnelFile) { Get-Content $tempTunnelFile | Select-Object -Last 5 }
-    $listener.Stop()
-    return
-}
+# 3. รัน Python สคริปต์
+python $tempFile
 
-# --- ย่อลิงก์ด้วย is.gd API ---
-Write-Host "กำลังย่อลิงก์ด้วย is.gd..." -ForegroundColor Cyan
-try {
-    $shortenApi = "https://is.gd/create.php?format=simple&url=$([System.Web.HttpUtility]::UrlEncode($publicUrl))"
-    $shortUrl = (Invoke-WebRequest -Uri $shortenApi -UseBasicParsing).Content.Trim()
-    $finalUrl = $shortUrl
-} catch {
-    $finalUrl = $publicUrl 
-}
-
-# --- คัดลอกลิงก์ลง Clipboard ---
-$finalUrl | Set-Clipboard
-$qrApiTerminal = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$([System.Web.HttpUtility]::UrlEncode($finalUrl))&format=ascii"
-
-# --- แสดงผลใน Console ---
-Clear-Host
-Write-Host "`n"
-Write-Host "  [ สแกน QR Code ด้านล่างเพื่อดาวน์โหลด ]" -ForegroundColor White -BackgroundColor Blue
-Write-Host "------------------------------------------------" -ForegroundColor Cyan
-
-try {
-    # ดึงค่า ASCII QR Code
-    $asciiQR = (Invoke-WebRequest -Uri $qrApiTerminal -UseBasicParsing).Content
-    Write-Host $asciiQR -ForegroundColor Black -BackgroundColor White
-} catch {
-    Write-Host "[ ไม่สามารถแสดง QR Code ได้ แต่ลิงก์ยังใช้งานได้ ]" -ForegroundColor Red
-}
-
-Write-Host "------------------------------------------------" -ForegroundColor Cyan
-Write-Host " [สถานะ: ออนไลน์]" -ForegroundColor Green -NoNewline
-Write-Host " (คัดลอกลิงก์ลง Clipboard แล้ว!)" -ForegroundColor Magenta
-Write-Host " ลิงก์สาธารณะ: " -NoNewline
-Write-Host $finalUrl -ForegroundColor Yellow -BackgroundColor Black
-Write-Host "------------------------------------------------"
-Write-Host "ไฟล์ที่กำลังแชร์:"
-$sharedFiles.Keys | ForEach-Object { Write-Host " - $_" }
-Write-Host "`n(กด Ctrl+C เพื่อหยุดการแชร์ไฟล์)"
-
-# --- ลูปหลักสำหรับรับ Request ---
-try {
-    while ($listener.IsListening) {
-        $context = $listener.GetContext()
-        $request = $context.Request
-        $response = $context.Response
-        $path = $request.Url.LocalPath
-
-        if ($path -eq "/") {
-            $html = "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:sans-serif;text-align:center;background:#f0f2f5;padding:20px;}.card{background:white;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);display:inline-block;max-width:90%;}a{display:inline-block;margin-top:10px;background:#28a745;color:white;padding:12px 25px;text-decoration:none;border-radius:8px;font-weight:bold;}</style></head><body>"
-            $html += "<div class='card'><h1>ดาวน์โหลดไฟล์จากคอมพิวเตอร์</h1><p>กรุณาอย่าปิดหน้าต่างโปรแกรมขณะกำลังดาวน์โหลด</p><hr>"
-            foreach ($name in $sharedFiles.Keys) {
-                $html += "<h3>$name</h3>"
-                $html += "<a href='/download?file=$([System.Web.HttpUtility]::UrlEncode($name))'>กดเพื่อดาวน์โหลด</a><br><br><hr>"
-            }
-            $html += "</div></body></html>"
-            
-            $buffer = [System.Text.Encoding]::UTF8.GetBytes($html)
-            $response.ContentType = "text/html"
-            $response.ContentLength64 = $buffer.Length
-            $response.OutputStream.Write($buffer, 0, $buffer.Length)
-        }
-        elseif ($path -eq "/download") {
-            $fileName = $request.QueryString["file"]
-            if ($sharedFiles.ContainsKey($fileName)) {
-                $filePath = $sharedFiles[$fileName]
-                $fileStream = [System.IO.File]::OpenRead($filePath)
-                $response.ContentType = "application/octet-stream"
-                $response.AddHeader("Content-Disposition", "attachment; filename=`"$fileName`"")
-                $response.ContentLength64 = $fileStream.Length
-                
-                $buffer = New-Object byte[] 65536
-                while (($read = $fileStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-                    $response.OutputStream.Write($buffer, 0, $read)
-                }
-                $fileStream.Close()
-            } else { $response.StatusCode = 404 }
-        }
-        $response.Close()
-    }
-} finally {
-    $listener.Stop()
-    if ($tunnelProcess) { Stop-Process -Id $tunnelProcess.Id -Force -ErrorAction SilentlyContinue }
-    if (Test-Path $tempTunnelFile) { Remove-Item $tempTunnelFile -Force }
-    if (Test-Path $nullHostsFile) { Remove-Item $nullHostsFile -Force }
-}
+# 4. ลบไฟล์ชั่วคราวเมื่อจบการทำงาน
+Remove-Item $tempFile
