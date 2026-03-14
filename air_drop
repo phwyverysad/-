@@ -39,15 +39,19 @@ try {
 Write-Host "`nกำลังเชื่อมต่อกับอินเทอร์เน็ตเพื่อสร้างลิงก์สาธารณะ..." -ForegroundColor Cyan
 # สร้างไฟล์ชั่วคราวสำหรับดึงข้อมูล Tunnel
 $tempTunnelFile = [System.IO.Path]::GetTempFileName()
-$tunnelProcess = Start-Process ssh -ArgumentList "-R 80:localhost:$port via@localhost.run" -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
+
+# แก้ไข: เพิ่ม -o StrictHostKeyChecking=no เพื่อข้ามการถาม yes/no ในครั้งแรก
+$tunnelProcess = Start-Process ssh -ArgumentList "-o StrictHostKeyChecking=no -R 80:localhost:$port via@localhost.run" -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
 
 # รอให้ SSH สร้างลิงก์เสร็จ
-$timeout = 10
+$timeout = 15 # เพิ่มเวลาเล็กน้อยเผื่อเน็ตช้า
 while ($timeout -gt 0) {
-    $content = Get-Content $tempTunnelFile | Out-String
-    if ($content -match "https://[a-zA-Z0-9-.]+\.lhr\.life") {
-        $publicUrl = $matches[0]
-        break
+    if (Test-Path $tempTunnelFile) {
+        $content = Get-Content $tempTunnelFile | Out-String
+        if ($content -match "https://[a-zA-Z0-9-.]+\.lhr\.life") {
+            $publicUrl = $matches[0]
+            break
+        }
     }
     Start-Sleep -Seconds 1
     $timeout--
@@ -55,6 +59,8 @@ while ($timeout -gt 0) {
 
 if (-not $publicUrl) {
     Write-Host "ไม่สามารถสร้าง Public URL ได้ กรุณาตรวจสอบว่าเครื่องมี SSH (OpenSSH) และต่อเน็ตอยู่" -ForegroundColor Red
+    Write-Host "Log ล่าสุด:"
+    if (Test-Path $tempTunnelFile) { Get-Content $tempTunnelFile | Select-Object -Last 5 }
     $listener.Stop()
     return
 }
