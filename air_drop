@@ -1,80 +1,88 @@
-# 1. ตรวจสอบและติดตั้ง Python Libraries ที่จำเป็น
-Write-Host "Checking for required Python libraries..." -ForegroundColor Cyan
-$libraries = "PyQt6", "requests", "pyqrcode", "pypng", "pyperclip"
+# 1. ติดตั้ง Python Libraries ที่จำเป็นแบบเงียบๆ
+Write-Host "--- Initializing Python Environment ---" -ForegroundColor Cyan
+$libraries = "requests", "pyqrcode", "pypng", "pyperclip"
 foreach ($lib in $libraries) {
     python -m pip install $lib --quiet
 }
 
-# 2. สร้างไฟล์ Python ชั่วคราวในเครื่อง
+# 2. ตัวสคริปต์ Python
 $pythonCode = @'
 import sys
 import requests
 import pyqrcode
 import pyperclip
 import os
-from PyQt6.QtWidgets import QApplication, QFileDialog
+import tkinter as tk
+from tkinter import filedialog
 
 def select_files():
-    app = QApplication(sys.argv)
-    file_dialog = QFileDialog()
-    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-    file_dialog.setWindowTitle("P2P File Selection - FilePizza Client")
-    
-    if file_dialog.exec():
-        return file_dialog.selectedFiles()
-    return None
+    root = tk.Tk()
+    root.withdraw() # ซ่อนหน้าต่างหลักของ tkinter
+    files = filedialog.askopenfilenames(title="เลือกไฟล์ที่ต้องการแชร์")
+    return files
 
-def shorten_url(long_url):
+def upload_and_share(file_paths):
+    # ใช้ oshi.at หรือ transfer.sh สำหรับ API-based sharing
+    # ในที่นี้ใช้ oshi.at เพราะรองรับการตั้งเวลาลบไฟล์ได้
+    
+    upload_urls = []
+    print("\n[+] กำลังอัปโหลดไฟล์ไปยัง P2P Proxy...")
+
+    for path in file_paths:
+        file_name = os.path.basename(path)
+        try:
+            with open(path, 'rb') as f:
+                # อัปโหลดไฟล์ (ตั้งให้อยู่ได้ 1 ชั่วโมงเพื่อความปลอดภัย)
+                response = requests.post('https://oshi.at', files={'f': (file_name, f)}, data={'expire': '60'})
+                if response.status_code == 200:
+                    # ดึงเอา Download Link จาก response (oshi.at จะคืนค่าเป็น Text)
+                    lines = response.text.split('\n')
+                    for line in lines:
+                        if "DL:" in line:
+                            link = line.replace("DL:", "").strip()
+                            upload_urls.append(link)
+                            break
+        except Exception as e:
+            print(f"❌ Error uploading {file_name}: {e}")
+
+    if not upload_urls:
+        return None
+
+    # ถ้ามีหลายไฟล์ เราจะเอาลิ้งค์แรกมาเป็นตัวแทน หรือรวมลิ้งค์
+    main_link = upload_urls[0]
+    
+    # ย่อลิ้งค์ด้วย is.gd
     try:
-        api_url = f"https://is.gd/create.php?format=simple&url={long_url}"
-        response = requests.get(api_url, timeout=5)
-        if response.status_code == 200:
-            return response.text
+        short_url = requests.get(f"https://is.gd/create.php?format=simple&url={main_link}", timeout=5).text
     except:
-        pass
-    return long_url
+        short_url = main_link
 
-def display_p2p_info(files):
-    # จำลองการสร้าง Session Link (P2P Session)
-    # ในระบบจริงจะมีการส่ง Meta-data ไปยัง FilePizza Tracker
-    session_id = os.urandom(4).hex()
-    p2p_link = f"https://file.pizza/share/{session_id}"
+    # สร้าง QR Code
+    qr = pyqrcode.create(short_url)
     
-    # ย่อลิ้งค์
-    short_link = shorten_url(p2p_link)
-    
-    # สร้าง QR Code แบบ Text สำหรับ PowerShell
-    qr = pyqrcode.create(short_link)
-    
-    print("\n" + "="*50)
-    print("      FILEPIZZA P2P - READY TO SHARE")
-    print("="*50)
+    print("\n" + "█"*50)
+    print("      READY TO DOWNLOAD")
+    print("█" * 50 + "\n")
     print(qr.terminal(quiet_zone=1))
-    print("-" * 50)
-    print(f"🔗 ลิ้งค์ย่อ: {short_link}")
+    print("\n" + "-"*50)
+    print(f"🔗 Short Link: {short_url}")
     
-    # คัดลอกลง Clipboard
-    pyperclip.copy(short_link)
-    print("✅ คัดลอกลิ้งค์ลง Clipboard เรียบร้อยแล้ว (Ctrl+V เพื่อส่ง)")
+    # Copy to Clipboard
+    pyperclip.copy(short_url)
+    print("✅ คัดลอกลิ้งค์ลง Clipboard เรียบร้อยแล้ว!")
     print("-" * 50)
-    print("⚠️  โปรดเปิดหน้าต่างนี้ค้างไว้ จนกว่าผู้รับจะดาวน์โหลดเสร็จ")
-    print(f"📦 ไฟล์ที่กำลังแชร์: {len(files)} ไฟล์")
-    for f in files: print(f" - {os.path.basename(f)}")
+    print(f"📦 ไฟล์ทั้งหมด: {len(file_paths)} ไฟล์")
 
 if __name__ == "__main__":
     selected = select_files()
     if selected:
-        display_p2p_info(selected)
+        upload_and_share(selected)
     else:
-        print("❌ ยกเลิกการเลือกไฟล์")
+        print("❌ ไม่ได้เลือกไฟล์")
 '@
 
-# บันทึกลงไฟล์ชั่วคราว
-$tempFile = "$env:TEMP\p2p_share.py"
+# บันทึกและรัน
+$tempFile = "$env:TEMP\p2p_active.py"
 $pythonCode | Out-File -FilePath $tempFile -Encoding utf8
-
-# 3. รัน Python สคริปต์
 python $tempFile
-
-# 4. ลบไฟล์ชั่วคราวเมื่อจบการทำงาน
 Remove-Item $tempFile
