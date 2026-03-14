@@ -1,48 +1,60 @@
+# กำหนดเส้นทางโฟลเดอร์ทำงาน
 $targetPath = "C:\phwyverysad"
 $zipFile = "$targetPath\avast_premium.zip"
 $url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/avast_premium.zip"
 
+# 1. เตรียมโฟลเดอร์
 if (!(Test-Path $targetPath)) {
     New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
+    Write-Host "Created directory: $targetPath" -ForegroundColor Cyan
 }
 
-Write-Host "Downloading avast_premium.zip..." -ForegroundColor Yellow
-
+# 2. ดาวน์โหลดไวที่สุดด้วย .NET (System.Net.WebClient)
+Write-Host "Downloading avast_premium.zip (High Speed)..." -ForegroundColor Yellow
 try {
-    # ใช้ Start-BitsTransfer หรือ Invoke-WebRequest จะเสถียรกว่าใน iex
-    Invoke-WebRequest -Uri $url -OutFile $zipFile -ErrorAction Stop
+    $webClient = New-Object System.Net.WebClient
+    # ใช้การดาวน์โหลดแบบปกติ (Synchronous) จะไวกว่าและเสถียรกว่าในสคริปต์อัตโนมัติ
+    $webClient.DownloadFile($url, $zipFile)
     Write-Host "Download completed." -ForegroundColor Green
 } catch {
-    Write-Host "Download Failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit
 }
 
+# 3. แตกไฟล์
 if (Test-Path $zipFile) {
     Write-Host "Extracting files..." -ForegroundColor Yellow
     Expand-Archive -Path $zipFile -DestinationPath $targetPath -Force
-    
-    $itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
-    foreach ($itemName in $itemsToMove) {
-        $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Select-Object -First 1
-        if ($sourceItem) {
-            Move-Item -Path $sourceItem.FullName -Destination (Join-Path $targetPath $itemName) -Force
-        }
-    }
-    
-    Remove-Item -Path $zipFile -Force
 }
 
+# 4. จัดระเบียบไฟล์
+$itemsToMove = @("INSTALL.cmd", "avast_premium_security_offline_setup.exe", "Crack")
+foreach ($itemName in $itemsToMove) {
+    $sourceItem = Get-ChildItem -Path $targetPath -Filter $itemName -Recurse | Select-Object -First 1
+    if ($sourceItem) {
+        $destPath = Join-Path $targetPath $itemName
+        if ($sourceItem.FullName -ne $destPath) {
+            Move-Item -Path $sourceItem.FullName -Destination $destPath -Force
+        }
+    }
+}
+
+# 5. ลบไฟล์ zip
+if (Test-Path $zipFile) { Remove-Item -Path $zipFile -Force }
+
+# 6. รันการติดตั้ง
 $cmdPath = Join-Path $targetPath "INSTALL.cmd"
 if (Test-Path $cmdPath) {
     Write-Host "Running INSTALL.cmd..." -ForegroundColor Magenta
-    # รัน cmd และรอให้จบ
+    # ใช้ /c เพื่อให้แน่ใจว่าทำงานใน context ของ cmd
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$cmdPath`"" -WorkingDirectory $targetPath -Wait
+    Write-Host "Execution finished." -ForegroundColor Green
 }
 
-# ส่วนการลบโฟลเดอร์ทิ้ง
+# 7. Cleanup
 Write-Host "Cleaning up..." -ForegroundColor Yellow
-Start-Sleep -Seconds 5
+Start-Sleep -Seconds 3
 if (Test-Path $targetPath) {
     Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
 }
-Write-Host "Done." -ForegroundColor Green
+Write-Host "Process Done." -ForegroundColor Green
