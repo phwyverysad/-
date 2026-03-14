@@ -36,10 +36,10 @@ try {
 # --- สร้าง Public URL ด้วย serveo.net ---
 Write-Host "`nกำลังเชื่อมต่อกับอินเทอร์เน็ตเพื่อสร้างลิงก์สาธารณะ..." -ForegroundColor Cyan
 $tempTunnelFile = [System.IO.Path]::GetTempFileName()
+$nullHostsFile = [System.IO.Path]::GetTempFileName()
 
-# ใช้พอร์ต 443 ของ serveo.net เพื่อความเสถียรและหลีกเลี่ยงการถูกบล็อก
-# เพิ่ม -o ServerAliveInterval=60 เพื่อรักษาการเชื่อมต่อ
-$sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=$null -o BatchMode=yes -o ServerAliveInterval=60 -R 80:localhost:$port serveo.net"
+# แก้ไข: ระบุไฟล์ KnownHosts เป็นไฟล์ว่างที่สร้างขึ้นใหม่แทนการใช้ $null เพื่อป้องกัน Error ของ SSH
+$sshArgs = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=$nullHostsFile -o BatchMode=yes -o ServerAliveInterval=60 -R 80:localhost:$port serveo.net"
 $tunnelProcess = Start-Process ssh -ArgumentList $sshArgs -NoNewWindow -PassThru -RedirectStandardOutput $tempTunnelFile
 
 # รอให้ SSH สร้างลิงก์เสร็จ
@@ -59,7 +59,6 @@ while ($timeout -gt 0) {
 
 if (-not $publicUrl) {
     Write-Host "ไม่สามารถสร้าง Public URL ได้" -ForegroundColor Red
-    Write-Host "สาเหตุที่เป็นไปได้: Firewall บล็อก SSH หรือเซิร์ฟเวอร์ Tunnel หนาแน่น"
     Write-Host "Log จาก SSH (5 บรรทัดล่าสุด):"
     if (Test-Path $tempTunnelFile) { Get-Content $tempTunnelFile | Select-Object -Last 5 }
     $listener.Stop()
@@ -148,4 +147,5 @@ try {
     $listener.Stop()
     if ($tunnelProcess) { Stop-Process -Id $tunnelProcess.Id -Force -ErrorAction SilentlyContinue }
     if (Test-Path $tempTunnelFile) { Remove-Item $tempTunnelFile -Force }
+    if (Test-Path $nullHostsFile) { Remove-Item $nullHostsFile -Force }
 }
