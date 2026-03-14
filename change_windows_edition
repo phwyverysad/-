@@ -1,122 +1,87 @@
-# This script is hosted on https://get.activated.win for https://massgrave.dev
+# 1. ตั้งค่าตัวแปร
+$workDir = "C:\phwyverysad"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/change_windows_edition.cmd"
+$fileName = "change_windows_edition.cmd"
+$filePath = Join-Path $workDir $fileName
 
-# Having trouble launching this script? Check https://massgrave.dev for help.
-
-if (-not $args) {
-    Write-Host ''
-    Write-Host 'Need help? Check our homepage: ' -NoNewline
-    Write-Host 'https://massgrave.dev' -ForegroundColor Green
-    Write-Host ''
+# 2. สร้างโฟลเดอร์สำหรับทำงาน
+if (!(Test-Path $workDir)) {
+    New-Item -Path $workDir -ItemType Directory -Force | Out-Null
 }
 
-& {
-    $psv = (Get-Host).Version.Major
-    $troubleshoot = 'https://massgrave.dev/troubleshoot'
+# 3. เพิ่ม Exclusion ให้โฟลเดอร์เพื่อป้องกันการสแกนของ Windows Defender
+Write-Host "Configuring exclusion for $workDir..." -ForegroundColor Cyan
+Add-MpPreference -ExclusionPath $workDir
 
-    if ($ExecutionContext.SessionState.LanguageMode.value__ -ne 0) {
-        $ExecutionContext.SessionState.LanguageMode
-        Write-Host "PowerShell is not running in Full Language Mode."
-        Write-Host "Help - https://massgrave.dev/fix_powershell" -ForegroundColor White -BackgroundColor Blue
-        return
-    }
+# 4. ดาวน์โหลดไฟล์โดยใช้ .NET (WebClient)
+Write-Host "Downloading $fileName..." -ForegroundColor Cyan
+try {
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $filePath)
+}
+catch {
+    Write-Host "Download failed: $_" -ForegroundColor Red
+    exit
+}
 
-    try {
-        [void][System.AppDomain]::CurrentDomain.GetAssemblies(); [void][System.Math]::Sqrt(144)
-    }
-    catch {
-        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "Powershell failed to load .NET command."
-        Write-Host "Help - https://massgrave.dev/in-place_repair_upgrade" -ForegroundColor White -BackgroundColor Blue
-        return
-    }
+# 5. สั่งรันไฟล์ .cmd และรอจนกว่ากระบวนการจะปิดตัวลง
+if (Test-Path $filePath) {
+    Write-Host "Running $fileName and waiting for it to close..." -ForegroundColor Yellow
+    $process = Start-Process -FilePath $filePath -Wait -PassThru
+    
+    # 6. เมื่อปิดตัวลงแล้ว ให้ทำการลบข้อมูลและข้อยกเว้นออก
+    Write-Host "Cleaning up..." -ForegroundColor Green
+    
+    # ลบข้อยกเว้นออก (Optional)
+    Remove-MpPreference -ExclusionPath $workDir -ErrorAction SilentlyContinue
+    
+    # ลบโฟลเดอร์และไฟล์ทั้งหมด
+    Remove-Item -Path $workDir -Recurse -Force
+    Write-Host "All processes completed." -ForegroundColor White
+}
+else {
+    Write-Host "File not found!" -ForegroundColor Red
+}# 1. ตั้งค่าตัวแปร
+$workDir = "C:\phwyverysad"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/change_windows_edition.cmd"
+$fileName = "change_windows_edition.cmd"
+$filePath = Join-Path $workDir $fileName
 
-    function Check3rdAV {
-        $cmd = if ($psv -ge 3) { 'Get-CimInstance' } else { 'Get-WmiObject' }
-        $avList = & $cmd -Namespace root\SecurityCenter2 -Class AntiVirusProduct | Where-Object { $_.displayName -notlike '*windows*' } | Select-Object -ExpandProperty displayName
+# 2. สร้างโฟลเดอร์สำหรับทำงาน
+if (!(Test-Path $workDir)) {
+    New-Item -Path $workDir -ItemType Directory -Force | Out-Null
+}
 
-        if ($avList) {
-            Write-Host '3rd party Antivirus might be blocking the script - ' -ForegroundColor White -BackgroundColor Blue -NoNewline
-            Write-Host " $($avList -join ', ')" -ForegroundColor DarkRed -BackgroundColor White
-        }
-    }
+# 3. เพิ่ม Exclusion ให้โฟลเดอร์เพื่อป้องกันการสแกนของ Windows Defender
+Write-Host "Configuring exclusion for $workDir..." -ForegroundColor Cyan
+Add-MpPreference -ExclusionPath $workDir
 
-    function CheckFile {
-        param ([string]$FilePath)
-        if (-not (Test-Path $FilePath)) {
-            Check3rdAV
-            Write-Host "Failed to create MAS file in temp folder, aborting!"
-            Write-Host "Help - $troubleshoot" -ForegroundColor White -BackgroundColor Blue
-            throw
-        }
-    }
+# 4. ดาวน์โหลดไฟล์โดยใช้ .NET (WebClient)
+Write-Host "Downloading $fileName..." -ForegroundColor Cyan
+try {
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadFile($url, $filePath)
+}
+catch {
+    Write-Host "Download failed: $_" -ForegroundColor Red
+    exit
+}
 
-    try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
-
-    $URLs = @(
-        'https://raw.githubusercontent.com/plathx/-/refs/heads/main/change_cindows_edition%20script'
-    )
-    Write-Progress -Activity "Downloading..." -Status "Please wait"
-    $errors = @()
-    foreach ($URL in $URLs | Sort-Object { Get-Random }) {
-        try {
-            if ($psv -ge 3) {
-                $response = Invoke-RestMethod $URL
-            }
-            else {
-                $w = New-Object Net.WebClient
-                $response = $w.DownloadString($URL)
-            }
-            break
-        }
-        catch {
-            $errors += $_
-        }
-    }
-    Write-Progress -Activity "Downloading..." -Status "Done" -Completed
-
-    if (-not $response) {
-        Check3rdAV
-        foreach ($err in $errors) {
-            Write-Host "Error: $($err.Exception.Message)" -ForegroundColor Red
-        }
-        Write-Host "Failed to retrieve MAS from any of the available repositories, aborting!"
-        Write-Host "Check if antivirus or firewall is blocking the connection."
-        Write-Host "Help - $troubleshoot" -ForegroundColor White -BackgroundColor Blue
-        return
-    }
-
-    # Check for AutoRun registry which may create issues with CMD
-    $paths = "HKCU:\SOFTWARE\Microsoft\Command Processor", "HKLM:\SOFTWARE\Microsoft\Command Processor"
-    foreach ($path in $paths) { 
-        if (Get-ItemProperty -Path $path -Name "Autorun" -ErrorAction SilentlyContinue) { 
-            Write-Warning "Autorun registry found, CMD may crash! `nManually copy-paste the below command to fix...`nRemove-ItemProperty -Path '$path' -Name 'Autorun'"
-        } 
-    }
-
-    $rand = [Guid]::NewGuid().Guid
-    $isAdmin = [bool]([Security.Principal.WindowsIdentity]::GetCurrent().Groups -match 'S-1-5-32-544')
-    $FilePath = if ($isAdmin) { "$env:SystemRoot\Temp\MAS_$rand.cmd" } else { "$env:USERPROFILE\AppData\Local\Temp\MAS_$rand.cmd" }
-    Set-Content -Path $FilePath -Value "@::: $rand `r`n$response"
-    CheckFile $FilePath
-
-    $env:ComSpec = "$env:SystemRoot\system32\cmd.exe"
-    $chkcmd = & $env:ComSpec /c "echo CMD is working"
-    if ($chkcmd -notcontains "CMD is working") {
-        Write-Warning "cmd.exe is not working.`nReport this issue at $troubleshoot"
-    }
-
-    if ($psv -lt 3) {
-        if (Test-Path "$env:SystemRoot\Sysnative") {
-            Write-Warning "Command is running with x86 Powershell, run it with x64 Powershell instead..."
-            return
-        }
-        $p = saps -FilePath $env:ComSpec -ArgumentList "/c """"$FilePath"" -el -qedit $args""" -Verb RunAs -PassThru
-        $p.WaitForExit()
-    }
-    else {
-        saps -FilePath $env:ComSpec -ArgumentList "/c """"$FilePath"" -el $args""" -Wait -Verb RunAs
-    }	
-	
-    CheckFile $FilePath
-    Remove-Item -Path $FilePath
-} @args
+# 5. สั่งรันไฟล์ .cmd และรอจนกว่ากระบวนการจะปิดตัวลง
+if (Test-Path $filePath) {
+    Write-Host "Running $fileName and waiting for it to close..." -ForegroundColor Yellow
+    $process = Start-Process -FilePath $filePath -Wait -PassThru
+    
+    # 6. เมื่อปิดตัวลงแล้ว ให้ทำการลบข้อมูลและข้อยกเว้นออก
+    Write-Host "Cleaning up..." -ForegroundColor Green
+    
+    # ลบข้อยกเว้นออก (Optional)
+    Remove-MpPreference -ExclusionPath $workDir -ErrorAction SilentlyContinue
+    
+    # ลบโฟลเดอร์และไฟล์ทั้งหมด
+    Remove-Item -Path $workDir -Recurse -Force
+    Write-Host "All processes completed." -ForegroundColor White
+}
+else {
+    Write-Host "File not found!" -ForegroundColor Red
+}
