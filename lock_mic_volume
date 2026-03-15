@@ -17,7 +17,7 @@ switch ($mainChoice) {
         # INSTALL PATH
         $zipPath = "C:\phwyverysad\lock_mic_volume.zip"
        
-        Invoke-WebRequest -Uri "https://is.gd/NZJRo6" -OutFile $zipPath -UseBasicParsing
+        Invoke-WebRequest -Uri "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip" -OutFile $zipPath -UseBasicParsing
        
         Set-Location "C:\phwyverysad"
         Expand-Archive -Path $zipPath -DestinationPath "." -Force
