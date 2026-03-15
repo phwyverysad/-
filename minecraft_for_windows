@@ -4,7 +4,7 @@ $zipPath = "$targetDir\minecraft_for_windows.zip"
 $installerName = "KG UP - Mod Installer.exe"
 
 if (-not (Test-Path $mcPath)) {
-    Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวน์โหลดและติดตั้งให้เสร็จก่อนรัน irm is.gd/minecraft_for_windows | iex" -ForegroundColor Yellow
+    Write-Host "ยังไม่มี Minecraft for Windows กรุณาดาวน์โหลดและติดตั้งให้เสร็จ -ForegroundColor Yellow
     Start-Sleep -Seconds 3
     Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH2JHXJ"
 } else {
@@ -12,7 +12,7 @@ if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory
 
     Write-Host "กำลังดาวน์โหลดไฟล์..." -ForegroundColor Cyan
     $client = New-Object System.Net.WebClient
-    $client.DownloadFile("https://is.gd/EHPP8o", $zipPath)
+    $client.DownloadFile("https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/minecraft_for_windows.zip", $zipPath)
 
     Write-Host "กำลังแตกไฟล์..." -ForegroundColor Cyan
     Add-Type -AssemblyName System.IO.Compression.FileSystem
