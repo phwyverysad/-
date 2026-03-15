@@ -1,5 +1,6 @@
 [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
+
 $menuItems = @{
     1  = @{ Name = "ล็อกไมค์ (Lock Mic)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic | iex" }
     2  = @{ Name = "เสกเกมสตรีม (Steam)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/import_games_steam | iex" }
