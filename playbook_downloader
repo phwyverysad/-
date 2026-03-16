@@ -1,56 +1,18 @@
 <#
 .SYNOPSIS
-    High-Performance OS Playbook Downloader (Fixed Core Engine)
-    Optimized for: Multi-threading, Zero-Copy Stream, and Disk Pre-allocation.
+    OS Playbook Downloader (High-Performance Engine)
+    Optimized for Parallel Execution & Direct I/O
 #>
 
 $ErrorActionPreference = "Stop"
 
-# 1. Networking & Protocol Optimization
+# 1. Networking Optimization
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
-# กำหนด Path (รองรับการรันผ่าน iex)
+# Determine Directory (Supporting IEX)
 $TargetDir = if ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $PWD }
 
-# นิยามขั้นตอนการดาวน์โหลดเป็น ScriptBlock (เพื่อส่งข้าม Thread)
-$DownloadEngine = {
-    param($Url, $FileName, $Destination)
-    
-    try {
-        $FilePath = Join-Path $Destination $FileName
-        
-        # 3. Memory Optimization: ใช้ HttpClient แบบแยก Thread ป้องกัน Race Condition
-        $handler = New-Object System.Net.Http.SocketsHttpHandler
-        $handler.PooledConnectionLifetime = New-TimeSpan -Minutes 2
-        $client = New-Object System.Net.Http.HttpClient($handler)
-        
-        $response = $client.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
-        $response.EnsureSuccessStatusCode() | Out-Null
-        
-        $totalBytes = $response.Content.Headers.ContentLength
-        $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-
-        # 4. Storage Optimization: Disk Pre-allocation & Async Write
-        $fileStream = New-Object System.IO.FileStream($FilePath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, $true)
-        if ($totalBytes) { 
-            $fileStream.SetLength($totalBytes) 
-        }
-
-        # Optimized Buffer (1MB)
-        $buffer = New-Object byte[] 1048576 
-        while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-            $fileStream.Write($buffer, 0, $count)
-        }
-
-        $fileStream.Flush(); $fileStream.Dispose(); $sourceStream.Dispose(); $client.Dispose()
-        Write-Host " [OK] Downloaded: $FileName" -ForegroundColor Green
-    }
-    catch {
-        Write-Host " [ERROR] $FileName : $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-# --- UI & Selection ---
+# Configuration
 $AME_URL  = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
 $REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
 
@@ -59,9 +21,9 @@ Write-Host "===================================================" -ForegroundColo
 Write-Host "       CORE-OPTIMIZED PLAYBOOK DOWNLOADER"         -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "[1] Full Suite (AME + Atlas + Revi)"
-Write-Host "[2] AtlasOS Only"
-Write-Host "[3] ReviOS Only"
-Write-Host "[4] AME Beta Only"
+Write-Host "[2] AtlasOS"
+Write-Host "[3] ReviOS"
+Write-Host "[4] AME Beta"
 Write-Host "---------------------------------------------------"
 $choice = Read-Host "Select Option"
 
@@ -81,15 +43,41 @@ if ($choice -eq '1' -or $choice -eq '4') { $queue.Add([PSCustomObject]@{Url=$AME
 if ($choice -eq '1' -or $choice -eq '2') { if($atlas){ $queue.Add([PSCustomObject]@{Url=$atlas[0]; Name=$atlas[1]}) } }
 if ($choice -eq '1' -or $choice -eq '3') { $queue.Add([PSCustomObject]@{Url=$REVI_URL; Name="Revi-PB-25.10.apbx"}) }
 
-# 2. Execution & Concurrency (Parallel Processing)
+# 2. Execution & Concurrency Model (Multi-threaded)
 Clear-Host
-Write-Host ">>> Initiating Multi-threaded Operations...`n" -ForegroundColor Magenta
+Write-Host ">>> Initiating Parallelized Download Engine...`n" -ForegroundColor Magenta
+
 $queue | ForEach-Object -Parallel {
-    # รัน ScriptBlock ผ่าน Invoke-Command และส่งตัวแปรผ่าน ArgumentList
-    Invoke-Command -ScriptBlock ($using:DownloadEngine) -ArgumentList $_.Url, $_.Name, ($using:TargetDir)
+    $item = $_
+    $dest = Join-Path ($using:TargetDir) $item.Name
+    
+    try {
+        # 3. HttpClient Factory & Stream Management
+        $handler = New-Object System.Net.Http.SocketsHttpHandler
+        $handler.PooledConnectionLifetime = New-TimeSpan -Minutes 2
+        $client = New-Object System.Net.Http.HttpClient($handler)
+        
+        $response = $client.GetAsync($item.Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+        $totalBytes = $response.Content.Headers.ContentLength
+        $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+
+        # 4. Storage Optimization: Pre-allocation
+        $fileStream = New-Object System.IO.FileStream($dest, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, $true)
+        if ($totalBytes) { $fileStream.SetLength($totalBytes) }
+
+        # Zero-Copy inspired Memory Streaming (1MB Buffer)
+        $buffer = New-Object byte[] 1048576
+        while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $fileStream.Write($buffer, 0, $count)
+        }
+
+        $fileStream.Flush(); $fileStream.Dispose(); $sourceStream.Dispose(); $client.Dispose()
+        Write-Host " [DONE] $($item.Name)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host " [FAIL] $($item.Name) : $($_.Exception.Message)" -ForegroundColor Red
+    }
 } -ThrottleLimit 4
 
-Write-Host "`n===================================================" -ForegroundColor Cyan
-Write-Host "            PROCESS COMPLETED SUCCESSFULLY"         -ForegroundColor Cyan
-Write-Host "===================================================" -ForegroundColor Cyan
+Write-Host "`nAll downloads finalized in: $TargetDir" -ForegroundColor Cyan
 explorer $TargetDir
