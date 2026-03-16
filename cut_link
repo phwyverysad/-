@@ -8,7 +8,7 @@ function Show-MainMenu {
     Write-Host "========================================" -ForegroundColor Cyan
     
     # ขั้นที่ 1: รับลิงก์ที่ต้องการย่อ
-    $url = Read-Host "กรุณาวางลิงก์ที่ต้องการย่อ (เช่น https://google.com)"
+    $url = Read-Host "กรุณาวางลิงก์ที่ต้องการย่อ"
     if ([string]::IsNullOrWhiteSpace($url)) {
         Write-Host "ข้อผิดพลาด: ลิงก์ห้ามว่าง!" -ForegroundColor Red
         Pause
