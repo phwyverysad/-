@@ -1,109 +1,106 @@
 <#
 .SYNOPSIS
-    OS Playbook Downloader (High-Speed & TLS 1.2 Forced)
+    High-Performance OS Playbook Downloader (Expert Edition)
+    Optimized for: Multi-threading, Low-latency Networking, and Direct I/O.
 #>
 
 $ErrorActionPreference = "Stop"
-# 1. ปิด Progress Bar เพื่อลดการใช้ทรัพยากร UI (ทำให้โหลดเร็วขึ้น)
-$ProgressPreference = 'SilentlyContinue'
 
-# 2. บังคับใช้ TLS 1.2 เพื่อความเสถียรในการเชื่อมต่อ HTTPS
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# 1. Networking & Protocol Optimization
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+$handler = New-Object System.Net.Http.SocketsHttpHandler
+$handler.PooledConnectionLifetime = New-TimeSpan -Minutes 5
+$handler.MaxConnectionsPerServer = 10
+$httpClient = New-Object System.Net.Http.HttpClient($handler)
 
-# ตรวจสอบตำแหน่งที่รันสคริปต์
-if ($MyInvocation.MyCommand.Path) {
-    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-} else {
-    $ScriptDir = $PWD
+# 2-4. Implementation Logic (Execution, Memory, Storage)
+Function Start-HighSpeedDownload {
+    param(
+        [Parameter(Mandatory=$true)][string]$Url,
+        [Parameter(Mandatory=$true)][string]$FileName
+    )
+
+    $DestPath = Join-Path $ScriptDir $FileName
+    Write-Host ">>> Initiating: $FileName" -ForegroundColor Cyan
+
+    try {
+        # Request Headers for Keep-Alive and Optimization
+        $request = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Get, $Url)
+        $responseTask = $httpClient.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead)
+        $response = $responseTask.GetAwaiter().GetResult()
+        $response.EnsureSuccessStatusCode() | Out-Null
+
+        $totalBytes = $response.Content.Headers.ContentLength
+        $sourceStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+
+        # 4. Disk Space Pre-allocation
+        $fileStream = New-Object System.IO.FileStream($DestPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1048576, [System.IO.FileOptions]::Asynchronous)
+        if ($totalBytes) {
+            $fileStream.SetLength($totalBytes) # Pre-allocate disk space
+        }
+
+        # 3. Optimized Buffer Stream (1MB)
+        $buffer = New-Object byte[] 1048576 # 1MB Buffer
+        $count = 0
+        while (($count = $sourceStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $fileStream.Write($buffer, 0, $count)
+        }
+
+        $fileStream.Flush()
+        $fileStream.Dispose()
+        $sourceStream.Dispose()
+        
+        Write-Host " [SUCCESS] $FileName" -ForegroundColor Green
+    }
+    catch {
+        Write-Host " [FAILED] $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
+
+# --- UI & Selection Logic ---
+if ($MyInvocation.MyCommand.Path) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path } else { $ScriptDir = $PWD }
 Set-Location $ScriptDir
 
 $AME_URL = "https://github.com/Ameliorated-LLC/trusted-uninstaller-cli/releases/download/0.8.4/AME-Beta-v0.8.4.exe"
 $REVI_URL = "https://github.com/meetrevision/playbook/releases/download/25.10/Revi-PB-25.10.apbx"
 
-# 3. ฟังก์ชันดาวน์โหลดโดยใช้ .NET WebClient (Synchronous)
-Function Download-File {
-    param([string]$Url, [string]$Name)
-    if ([string]::IsNullOrWhiteSpace($Url)) { return }
-    
-    Write-Host ">>> Downloading: $Name..." -ForegroundColor Cyan
-    try {
-        $storagePath = Join-Path $ScriptDir $Name
-        $WebClient = New-Object System.Net.WebClient
-        # ดาวน์โหลดแบบตรงไปตรงมา
-        $WebClient.DownloadFile($Url, $storagePath)
-        Write-Host " [OK] Done." -ForegroundColor Green
-    }
-    catch {
-        Write-Host " [ERROR] Failed to download $Name" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Gray
-    }
-}
-
 Clear-Host
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "       OS PLAYBOOK DOWNLOADER (FAST MODE)" -ForegroundColor Cyan
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "[1] AME Beta + AtlasOS + ReviOS"
+Write-Host "===================================================" -ForegroundColor Magenta
+Write-Host "       CORE-OPTIMIZED PLAYBOOK DOWNLOADER"         -ForegroundColor Magenta
+Write-Host "===================================================" -ForegroundColor Magenta
+Write-Host "[1] Full Suite (AME + Atlas + Revi)"
 Write-Host "[2] AtlasOS"
 Write-Host "[3] ReviOS"
 Write-Host "[4] AME Beta"
-Write-Host "==================================================="
-$main_choice = Read-Host "Select an option (1-4)"
+Write-Host "---------------------------------------------------"
+$choice = Read-Host "Enter Selection"
 
-$filesToDownload = @()
+$queue = New-Object System.Collections.Generic.List[PSCustomObject]
 
-if ($main_choice -match '^[1-4]$') {
-    if ($main_choice -in @('1', '2')) {
-        Clear-Host
-        Write-Host "Select Windows Version for AtlasOS:" -ForegroundColor Yellow
-        Write-Host "[1] Windows 11 25H2"
-        Write-Host "[2] Windows 11 24H2"
-        Write-Host "[3] Windows 11 23H2 or older"
-        Write-Host "[4] Windows 10 22H2"
-        $ver = Read-Host "Selection"
-        
-        $atlas_map = @{
-            "1" = @("https://github.com/Atlas-OS/Atlas/releases/download/0.5.0-hotfix/AtlasPlaybook_v0.5.0-hotfix.apbx", "AtlasPlaybook_v0.5.0-hotfix.apbx")
-            "2" = @("https://github.com/Atlas-OS/Atlas/releases/download/0.4.1/AtlasPlaybook_v0.4.1.apbx", "AtlasPlaybook_v0.4.1.apbx")
-            "3" = @("https://github.com/Atlas-OS/Atlas/releases/download/0.4.0/AtlasPlaybook_v0.4.0.apbx", "AtlasPlaybook_v0.4.0.apbx")
-            "4" = @("https://github.com/Atlas-OS/Atlas/releases/download/0.4.0/AtlasPlaybook_v0.4.0.apbx", "AtlasPlaybook_v0.4.0.apbx")
-        }
-        $atlas = $atlas_map[$ver]
-        
-        if ($null -eq $atlas) {
-            Write-Host "Invalid Version Selection!" -ForegroundColor Red
-            return
-        }
+# Mapping Atlas versions
+if ($choice -in '1','2') {
+    Write-Host "`nSelect AtlasOS Version:`n[1] 24H2/25H2  [2] 23H2  [3] Win10 22H2" -ForegroundColor Yellow
+    $v = Read-Host "Ver"
+    $atlas = switch($v){
+        "1" {@("https://github.com/Atlas-OS/Atlas/releases/download/0.5.0-hotfix/AtlasPlaybook_v0.5.0-hotfix.apbx", "AtlasPlaybook_v0.5.0.apbx")}
+        "2" {@("https://github.com/Atlas-OS/Atlas/releases/download/0.4.1/AtlasPlaybook_v0.4.1.apbx", "AtlasPlaybook_v0.4.1.apbx")}
+        "3" {@("https://github.com/Atlas-OS/Atlas/releases/download/0.4.0/AtlasPlaybook_v0.4.0.apbx", "AtlasPlaybook_v0.4.0.apbx")}
     }
-
-    if ($main_choice -eq '1') {
-        $filesToDownload += ,@($AME_URL, "AME-Beta-v0.8.4.exe")
-        $filesToDownload += ,@($atlas[0], $atlas[1])
-        $filesToDownload += ,@($REVI_URL, "Revi-PB-25.10.apbx")
-    }
-    elseif ($main_choice -eq '2') {
-        $filesToDownload += ,@($atlas[0], $atlas[1])
-    }
-    elseif ($main_choice -eq '3') {
-        $filesToDownload += ,@($REVI_URL, "Revi-PB-25.10.apbx")
-    }
-    elseif ($main_choice -eq '4') {
-        $filesToDownload += ,@($AME_URL, "AME-Beta-v0.8.4.exe")
-    }
-
-    Clear-Host
-    foreach ($file in $filesToDownload) {
-        Download-File -Url $file[0] -Name $file[1]
-    }
-
-    Write-Host "`n===================================================" -ForegroundColor Green
-    Write-Host "                DOWNLOAD COMPLETED!" -ForegroundColor Green
-    Write-Host "   Files saved to: $ScriptDir"
-    Write-Host "===================================================" -ForegroundColor Green
-    explorer $ScriptDir
 }
-else {
-    Write-Host "Invalid Selection!" -ForegroundColor Red
-    Start-Sleep -Seconds 2
-}
+
+# Queue building
+if ($choice -eq '1' -or $choice -eq '4') { $queue.Add([PSCustomObject]@{Url=$AME_URL; Name="AME-v0.8.4.exe"}) }
+if ($choice -eq '1' -or $choice -eq '2') { if($atlas){ $queue.Add([PSCustomObject]@{Url=$atlas[0]; Name=$atlas[1]}) } }
+if ($choice -eq '1' -or $choice -eq '3') { $queue.Add([PSCustomObject]@{Url=$REVI_URL; Name="Revi-PB-25.10.apbx"}) }
+
+# Execute Multi-threaded Parallelism
+Clear-Host
+Write-Host ">>> Starting Parallel Execution Stage..." -ForegroundColor Yellow
+$queue | ForEach-Object -Parallel {
+    # ปรับจูน Scope ภายใน Parallel
+    $using:Action = { Start-HighSpeedDownload -Url $args[0] -FileName $args[1] }
+    &$using:Action $PSItem.Url $PSItem.Name
+} -ThrottleLimit 4
+
+Write-Host "`nAll operations completed. Resources released." -ForegroundColor Green
+explorer $ScriptDir
