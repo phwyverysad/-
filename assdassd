@@ -2,80 +2,76 @@ Add-Type -AssemblyName System.Windows.Forms
 $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
     InitialDirectory = [Environment]::GetFolderPath('Desktop') 
     Filter = "All Files (*.*)|*.*"
-    Title = "เลือกไฟล์ที่ต้องการตรวจสอบกับ VirusTotal"
+    Title = "เลือกไฟล์เพื่อตรวจสอบชื่อไวรัสแบบตาราง"
 }
 
-# 1. เปิดหน้าต่างเลือกไฟล์
 $null = $FileBrowser.ShowDialog()
 $filePath = $FileBrowser.FileName
 
-if (-not $filePath) {
-    Write-Host "[-] คุณไม่ได้เลือกไฟล์ จบการทำงาน" -ForegroundColor Yellow
-    exit
-}
+if (-not $filePath) { Write-Host "[-] ไม่ได้เลือกไฟล์" -ForegroundColor Yellow; exit }
 
+# ใส่ API Key ของคุณที่นี่
 $apiKey = "2a359ba5f1ce8ff799adabc8903416c1b6bc9c4bc35a88dfae1e24c2061fd7fd"
 
-# 2. รายการคำต้องห้าม
-$blacklist = @(
-    "Xworm", "Backdoor", "Dropper", "AsyncRAT", "Njrat", "Stealer", 
-    "Spy", "Pyinstaller", "Python", "Expiro", "Rat"
-)
+$blacklist = @("Xworm", "Backdoor", "Dropper", "AsyncRAT", "Njrat", "Stealer", "Spy", "Pyinstaller", "Python", "Expiro", "Rat")
 
-Write-Host "`n[*] กำลังจัดการไฟล์: $filePath" -ForegroundColor Cyan
+Write-Host "`n[*] กำลังคำนวณ Hash และดึงข้อมูลจาก VirusTotal..." -ForegroundColor Cyan
 $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
 $headers = @{ "x-apikey" = $apiKey }
 
 try {
     $response = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/$fileHash" -Headers $headers -Method Get
-    
-    # ดึงผลลัพธ์ทั้งหมด
     $allResults = $response.data.attributes.last_analysis_results.Values | Where-Object { $_.result -ne $null }
     
-    # คัดกรองคำต้องห้าม
+    # --- แยกตารางคำต้องห้าม ---
     $foundInBlacklist = @()
     foreach ($item in $allResults) {
         foreach ($word in $blacklist) {
             if ($item.result -ilike "*$word*") {
                 $foundInBlacklist += [PSCustomObject]@{
-                    Keyword   = $word.ToUpper()
-                    Detection = $item.result
-                    Engine    = $item.engine_name
+                    'MATCHED KEYWORD' = $word.ToUpper()
+                    'VIRUS NAME'      = $item.result
+                    'ANTIVIRUS ENGINE' = $item.engine_name
                 }
                 break
             }
         }
     }
 
-    # --- การแสดงผล ---
-    Write-Host "`n" + ("=" * 60) -ForegroundColor White
-    Write-Host " รายงานไฟล์: $($response.data.attributes.meaningful_name)" -ForegroundColor Cyan
-    Write-Host ("=" * 60) -ForegroundColor White
+    # --- เริ่มการแสดงผลตาราง ---
+    Write-Host "`n" + ("=" * 85) -ForegroundColor White
+    Write-Host " รายงานผลตรวจสอบ: $($response.data.attributes.meaningful_name)" -ForegroundColor Cyan
+    Write-Host ("=" * 85) -ForegroundColor White
 
-    # ส่วนที่ 1: รายการที่ตรงกับ Blacklist ของคุณ
-    Write-Host "`n[!] ตรวจพบคำต้องห้ามที่คุณกำหนดไว้:" -ForegroundColor Red -BackgroundColor Black
+    # ตารางที่ 1: เฉพาะที่ตรงกับ Blacklist (ถ้ามี)
     if ($foundInBlacklist.Count -gt 0) {
-        $foundInBlacklist | Select-Object Keyword, Detection, Engine | Format-Table -AutoSize
-        Write-Host ">>> สรุป: อันตราย! พบคำต้องห้ามในชื่อไวรัส <<<" -ForegroundColor Red -BackgroundColor Black
+        Write-Host "[!] ตรวจพบคำต้องห้ามในชื่อไวรัส (CRITICAL FOUND)" -ForegroundColor Red -BackgroundColor Black
+        $foundInBlacklist | Format-Table -AutoSize
+        Write-Host ">>> สรุป: พบคำต้องห้าม! ไม่แนะนำให้ใช้ไฟล์นี้ <<<" -ForegroundColor Red
     } else {
-        Write-Host " ไม่พบคำต้องห้ามในรายชื่อไวรัสที่คุณกำหนด" -ForegroundColor Green
+        Write-Host "[+] ไม่พบคำต้องห้ามตามลิสต์ที่คุณกำหนดไว้" -ForegroundColor Green
     }
 
-    Write-Host "`n" + ("-" * 60) -ForegroundColor Gray
+    Write-Host ("-" * 85) -ForegroundColor Gray
 
-    # ส่วนที่ 2: รายชื่อไวรัสทั้งหมด (Full List)
-    Write-Host "[+] รายชื่อไวรัสทั้งหมดที่ตรวจพบ (จากทุกค่าย):" -ForegroundColor Yellow
+    # ตารางที่ 2: รายชื่อไวรัสทั้งหมดที่ตรวจเจอ (Full Table)
+    Write-Host "[+] รายชื่อการตรวจพบทั้งหมด (จากทุกค่าย)" -ForegroundColor Yellow
     if ($allResults.Count -gt 0) {
-        $allResults | Select-Object @{n='Engine';e={$_.engine_name}}, @{n='Result';e={$_.result}} | Format-Table -AutoSize
+        $allResults | Select-Object @{n='ANTIVIRUS ENGINE';e={$_.engine_name}}, @{n='DETECTION RESULT';e={$_.result}} | Format-Table -AutoSize
     } else {
-        Write-Host " ไฟล์นี้สะอาด (ไม่พบประวัติมัลแวร์)" -ForegroundColor Green
+        Write-Host " ไม่พบประวัติมัลแวร์ในฐานข้อมูล (Clean)" -ForegroundColor Green
     }
 
+    # สรุปคะแนนท้ายตาราง
     $stats = $response.data.attributes.last_analysis_stats
-    Write-Host "`nคะแนนความอันตราย: $($stats.malicious) / $($stats.malicious + $stats.undetected) Engines" -ForegroundColor White
+    Write-Host ("=" * 85) -ForegroundColor White
+    Write-Host "คะแนนความอันตราย: " -NoNewline
+    Write-Host "$($stats.malicious)" -ForegroundColor Red -NoNewline
+    Write-Host " จาก $($stats.malicious + $stats.undetected) ค่ายสแกน"
+    Write-Host ("=" * 85) -ForegroundColor White
 
 } catch {
-    Write-Host "`n[-] ไม่พบข้อมูลไฟล์นี้ในระบบ (อาจเป็นไฟล์ใหม่มาก) หรือ API Key ผิดพลาด" -ForegroundColor Yellow
+    Write-Host "`n[-] ไม่พบข้อมูลไฟล์นี้ (ยังไม่มีใครเคยส่งสแกน) หรือ API Key ไม่ถูกต้อง" -ForegroundColor Yellow
 }
 
 Write-Host "`nกด Enter เพื่อปิดหน้าต่าง..."
