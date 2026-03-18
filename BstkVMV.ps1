@@ -59,7 +59,6 @@ try {
     if ($AllocatedMemory -eq [IntPtr]::Zero) { throw "Could not allocate memory in target process." }
 
     $BytesWritten = [IntPtr]::Zero
-    # Use [ref] instead of [out]
     $Result = [Injector]::WriteProcessMemory($hProcess, $AllocatedMemory, $DllPathBytes, [uint32]$DllPathBytes.Length, [ref] $BytesWritten)
     if (-not $Result) { throw "Could not write to memory." }
 
