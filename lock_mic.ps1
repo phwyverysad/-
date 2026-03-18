@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
