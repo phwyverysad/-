@@ -9,13 +9,13 @@ $menuItems = @{
     6  = @{ Name = "แปลงไฟล์ .py เป็น .exe"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/py_to_exe.ps1 | iex" }
     7  = @{ Name = "ติดตั้ง Minecraft for Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/minecraft_for_windows.ps1 | iex" }
     8  = @{ Name = "ติดตั้ง Discord 3 ตัว"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/rwm_discord.ps1 | iex" }
-    9  = @{ Name = "Clean Ram (คล้าย RamMap)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex" }
+    9  = @{ Name = "Clean Ram"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex" }
     10 = @{ Name = "ปรับแต่ง Windows (WinUtil)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/winutil.ps1 | iex" }
     11 = @{ Name = "สร้างลิ้งก์ดาวน์โหลดไฟล์"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/setup_share.ps1 | iex" }
     12 = @{ Name = "สร้างจุดย้อนระบบ (Restore)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/system_restore.ps1 | iex" }
     13 = @{ Name = "เมนูทางลัด Power/BIOS"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/menu_options.ps1 | iex" }
     14 = @{ Name = "ติดตั้ง Lossless Scaling"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex" }
-    15 = @{ Name = "ถอนการติดตั้ง (Revo Unin)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex" }
+    15 = @{ Name = "ติดตั้ง Revo Uninstaller Pro"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex" }
     16 = @{ Name = "จัดการไดรเวอร์ (Driver Easy)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/driver_easy_pro.ps1 | iex" }
     17 = @{ Name = "ติดตั้งส่วนเสริม Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/dev_tools.ps1 | iex" }
     18 = @{ Name = "ย่อลิ้งก์ให้สั้น (Short Link)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/cut_link.ps1 | iex" }
@@ -25,7 +25,7 @@ $menuItems = @{
     22 = @{ Name = "เปลี่ยนรุ่น Windows"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/change_windows_edition.ps1 | iex" }
     23 = @{ Name = "เช็คสถานะ Activate"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/check_status_windows.ps1 | iex" }
     24 = @{ Name = "ติดตั้ง Avast Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex" }
-    25 = @{ Name = "ติดตั้ง Malwarebytes Pre"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
+    25 = @{ Name = "ติดตั้ง Malwarebytes Premium"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/malwarebytes_premium.ps1 | iex" }
 }
 
 function Show-Menu {
