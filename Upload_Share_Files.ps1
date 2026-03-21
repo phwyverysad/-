@@ -1,4 +1,3 @@
-# --- Initialization & Optimization ---
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = "C:\Web Server"; $file = "$dir\Upload.Share.html"
