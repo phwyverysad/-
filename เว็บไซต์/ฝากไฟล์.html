@@ -3,470 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>อัปโหลดและแชร์ไฟล์ | File Uploader</title>
+    <title>Gofile - ฝากไฟล์ & แชร์ด้วยคิวอาร์โค้ด</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Prompt', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        .dropzone-active {
-            border-color: #0ea5e9;
-            background-color: #f0f9ff;
-        }
-        
-        /* Custom Scrollbar for small text areas */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-        /* Toast Animation */
-        @keyframes slideIn {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        .dragover { 
+            border-color: #8b5cf6 !important; 
+            background-color: #f5f3ff !important; 
+            transform: scale(1.02);
         }
-        @keyframes slideOut {
-            from { transform: translateY(0); opacity: 1; }
-            to { transform: translateY(100%); opacity: 0; }
-        }
-        .toast-enter {
-            animation: slideIn 0.3s ease-out forwards;
-        }
-        .toast-leave {
-            animation: slideOut 0.3s ease-in forwards;
+        /* ซ่อน scrollbar สำหรับชื่อไฟล์ยาวๆ */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        #qrcode img {
+            margin: auto;
+            border-radius: 0.5rem;
         }
     </style>
 </head>
-<body class="flex items-center justify-center p-4 text-gray-800">
+<body class="bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="glass-panel w-full max-w-lg rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+    <div class="bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl p-8 w-full max-w-md transition-all duration-300">
         
         <!-- Header -->
-        <div class="bg-gradient-to-r from-brand-600 to-brand-500 p-6 text-white text-center">
-            <i class="fa-solid fa-cloud-arrow-up text-4xl mb-3 drop-shadow-md"></i>
-            <h1 class="text-2xl font-bold tracking-wide">ฝากไฟล์ & แชร์ลิงก์</h1>
-            <p class="text-brand-100 text-sm mt-1">อัปโหลดไฟล์ของคุณได้อย่างรวดเร็วและปลอดภัย</p>
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl mb-4 shadow-lg shadow-indigo-200 text-white transform -rotate-6 hover:rotate-0 transition duration-300">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-800">อัปโหลด & แชร์ไฟล์</h1>
+            <p class="text-gray-500 text-sm mt-1">อัปโหลดไฟล์ฟรี พร้อมรับ Link และ QR Code</p>
         </div>
 
-        <div class="p-6">
-            <!-- Provider Selection -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">เลือกเซิร์ฟเวอร์ (API)</label>
-                <div class="grid grid-cols-2 gap-4">
-                    <label class="cursor-pointer relative">
-                        <input type="radio" name="provider" value="gofile" class="peer sr-only" checked>
-                        <div class="rounded-lg border-2 border-gray-200 p-3 hover:bg-gray-50 transition-colors peer-checked:border-brand-500 peer-checked:bg-brand-50 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-server text-brand-600"></i>
-                            <span class="font-medium text-gray-700">Gofile.io</span>
-                        </div>
-                        <div class="absolute top-2 right-2 text-brand-500 opacity-0 peer-checked:opacity-100 transition-opacity">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-                    </label>
-
-                    <label class="cursor-pointer relative">
-                        <input type="radio" name="provider" value="catbox" class="peer sr-only">
-                        <div class="rounded-lg border-2 border-gray-200 p-3 hover:bg-gray-50 transition-colors peer-checked:border-brand-500 peer-checked:bg-brand-50 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-cat text-brand-600"></i>
-                            <span class="font-medium text-gray-700">Catbox.moe</span>
-                        </div>
-                        <div class="absolute top-2 right-2 text-brand-500 opacity-0 peer-checked:opacity-100 transition-opacity">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-                    </label>
-                </div>
-                <p class="text-xs text-gray-400 mt-2 italic">* หมายเหตุ: Catbox รองรับไฟล์สูงสุด 200MB ส่วน Gofile ไม่จำกัดขนาด</p>
+        <!-- Drop Zone -->
+        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center transition-all duration-300 hover:border-purple-400 hover:bg-purple-50 cursor-pointer mb-6 group">
+            <input type="file" id="file-input" class="hidden">
+            <div class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-100 transition">
+                <i class="fa-solid fa-folder-open text-2xl text-gray-400 group-hover:text-purple-500 transition"></i>
             </div>
+            <p class="text-gray-700 font-medium">คลิกเลือกไฟล์ หรือลากมาวาง</p>
+            <p class="text-gray-400 text-xs mt-2">ไม่จำกัดขนาด รองรับทุกนามสกุลไฟล์</p>
+        </div>
 
-            <!-- Dropzone -->
-            <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-all duration-200 group">
-                <input type="file" id="fileInput" class="hidden">
-                <div id="dropzone-content">
-                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-folder-open text-2xl"></i>
-                    </div>
-                    <h3 class="text-lg font-medium text-gray-700 mb-1">คลิกเพื่อเลือกไฟล์</h3>
-                    <p class="text-sm text-gray-500">หรือลากไฟล์มาวางที่นี่</p>
+        <!-- File Info (Hidden) -->
+        <div id="file-info" class="hidden bg-gray-50 p-4 rounded-xl flex items-center justify-between mb-6 border border-gray-200 shadow-sm">
+            <div class="flex items-center overflow-hidden w-full pr-4">
+                <div class="bg-indigo-100 p-2 rounded-lg mr-3 text-indigo-500 shrink-0">
+                    <i class="fa-solid fa-file-lines text-lg"></i>
                 </div>
-                
-                <!-- File Preview (Hidden by default) -->
-                <div id="file-preview" class="hidden flex flex-col items-center justify-center">
-                    <i class="fa-solid fa-file-lines text-4xl text-brand-500 mb-3"></i>
-                    <p id="file-name" class="font-medium text-gray-800 break-all line-clamp-2 max-w-full">filename.ext</p>
-                    <p id="file-size" class="text-xs text-gray-500 mt-1">0 MB</p>
-                    <button id="btn-remove-file" class="mt-3 text-red-500 text-sm hover:text-red-700 hover:underline">
-                        ยกเลิกการเลือก
-                    </button>
+                <div class="overflow-hidden w-full">
+                    <p id="file-name" class="text-sm font-medium text-gray-800 truncate"></p>
+                    <p id="file-size" class="text-xs text-gray-500 mt-0.5"></p>
                 </div>
             </div>
-
-            <!-- Upload Button -->
-            <button id="btn-upload" disabled class="w-full mt-6 bg-gray-300 text-gray-500 font-medium py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-sm disabled:cursor-not-allowed">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                อัปโหลดไฟล์
+            <button id="remove-file" class="text-gray-400 hover:text-red-500 transition-colors shrink-0 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm border border-gray-100">
+                <i class="fa-solid fa-trash-can"></i>
             </button>
-
-            <!-- Progress Section (Hidden by default) -->
-            <div id="progress-container" class="hidden mt-6">
-                <div class="flex justify-between text-sm mb-1">
-                    <span id="progress-status" class="font-medium text-brand-700">กำลังอัปโหลด...</span>
-                    <span id="progress-percent" class="font-bold text-gray-700">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                    <div id="progress-bar" class="bg-brand-500 h-2.5 rounded-full" style="width: 0%; transition: width 0.3s ease;"></div>
-                </div>
-            </div>
-
-            <!-- Result Section (Hidden by default) -->
-            <div id="result-container" class="hidden mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
-                <h3 class="text-green-800 font-medium flex items-center gap-2 mb-3">
-                    <i class="fa-solid fa-circle-check text-green-500"></i> อัปโหลดสำเร็จ!
-                </h3>
-                <div class="flex items-center gap-2 bg-white p-2 border border-gray-200 rounded-lg">
-                    <input type="text" id="result-url" readonly class="w-full text-sm text-gray-600 bg-transparent outline-none px-2" value="https://example.com/file">
-                    <button id="btn-copy" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex-shrink-0">
-                        <i class="fa-regular fa-copy"></i> คัดลอก
-                    </button>
-                    <a id="btn-open" href="#" target="_blank" class="bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex-shrink-0">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิด
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Error Message (Hidden by default) -->
-            <div id="error-container" class="hidden mt-4 text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200 flex items-start gap-2">
-                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-                <span id="error-message">เกิดข้อผิดพลาดบางอย่าง</span>
-            </div>
-
         </div>
-    </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-24 opacity-0 transition-all duration-300 z-50">
-        <i class="fa-solid fa-check-circle text-green-400 text-lg"></i>
-        <span id="toast-message">คัดลอกลิงก์เรียบร้อยแล้ว!</span>
+        <!-- Error Message -->
+        <div id="error-message" class="hidden text-red-500 text-sm text-center mb-4 bg-red-50 p-3 rounded-xl border border-red-100"></div>
+
+        <!-- Upload Button -->
+        <button id="upload-btn" disabled class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-3.5 px-4 rounded-xl transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>เริ่มอัปโหลดไฟล์</span>
+        </button>
+
+        <!-- Progress Area (Hidden) -->
+        <div id="progress-area" class="hidden mt-4">
+            <div class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                <span id="progress-text" class="flex items-center">
+                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 mr-2"></i>กำลังอัปโหลด...
+                </span>
+                <span id="progress-percent" class="text-indigo-600">0%</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-300 relative" style="width: 0%">
+                    <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Area (Hidden) -->
+        <div id="result-area" class="hidden mt-6 animate-fade-in">
+            <div class="bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl flex items-center justify-center mb-6">
+                <i class="fa-solid fa-circle-check text-xl mr-2"></i>
+                <span class="font-medium text-sm">อัปโหลดไฟล์สำเร็จ!</span>
+            </div>
+
+            <!-- QR Code Box -->
+            <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl flex flex-col items-center justify-center mb-5">
+                <p class="text-xs text-gray-500 font-medium mb-3">สแกนเพื่อดาวน์โหลด</p>
+                <div id="qrcode" class="bg-white p-2 rounded-xl shadow-sm border border-gray-100"></div>
+            </div>
+
+            <!-- Link Box -->
+            <label class="text-xs font-medium text-gray-500 ml-1 mb-1 block">ลิ้งก์ดาวน์โหลด</label>
+            <div class="flex items-center space-x-2 mb-6">
+                <input type="text" id="result-link" readonly class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent block p-3 outline-none transition">
+                <button id="copy-btn" class="bg-gray-800 hover:bg-black text-white p-3 rounded-xl transition duration-200 shrink-0 w-12 flex justify-center items-center shadow-md" title="คัดลอกลิ้งก์">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            </div>
+
+            <button id="reset-btn" class="w-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium py-3 px-4 rounded-xl transition duration-300 flex items-center justify-center">
+                <i class="fa-solid fa-rotate-right mr-2"></i> อัปโหลดไฟล์อื่นเพิ่มเติม
+            </button>
+        </div>
+
     </div>
 
     <script>
-        // DOM Elements
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        const dropzoneContent = document.getElementById('dropzone-content');
-        const filePreview = document.getElementById('file-preview');
-        const fileNameEl = document.getElementById('file-name');
-        const fileSizeEl = document.getElementById('file-size');
-        const btnRemoveFile = document.getElementById('btn-remove-file');
-        const btnUpload = document.getElementById('btn-upload');
-        const progressContainer = document.getElementById('progress-container');
+        // Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const removeFileBtn = document.getElementById('remove-file');
+        const uploadBtn = document.getElementById('upload-btn');
+        const progressArea = document.getElementById('progress-area');
         const progressBar = document.getElementById('progress-bar');
         const progressPercent = document.getElementById('progress-percent');
-        const progressStatus = document.getElementById('progress-status');
-        const resultContainer = document.getElementById('result-container');
-        const resultUrl = document.getElementById('result-url');
-        const btnCopy = document.getElementById('btn-copy');
-        const btnOpen = document.getElementById('btn-open');
-        const errorContainer = document.getElementById('error-container');
+        const progressText = document.getElementById('progress-text');
+        const resultArea = document.getElementById('result-area');
+        const resultLink = document.getElementById('result-link');
+        const copyBtn = document.getElementById('copy-btn');
+        const resetBtn = document.getElementById('reset-btn');
         const errorMessage = document.getElementById('error-message');
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toast-message');
+        const qrcodeContainer = document.getElementById('qrcode');
 
-        let currentFile = null;
+        let selectedFile = null;
+        let qrCodeObj = null;
 
-        // --- Utility Functions ---
-
+        // Utility: Format File Size
         function formatBytes(bytes, decimals = 2) {
-            if (!+bytes) return '0 Bytes';
+            if (bytes === 0) return '0 Bytes';
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
             const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
 
-        function showToast(message) {
-            toastMessage.textContent = message;
-            toast.classList.remove('translate-y-24', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-24', 'opacity-0');
-            }, 3000);
-        }
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorContainer.classList.remove('hidden');
+        // Handle Error Display
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.classList.remove('hidden');
         }
 
         function hideError() {
-            errorContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
         }
 
-        function resetUI() {
-            progressContainer.classList.add('hidden');
-            resultContainer.classList.add('hidden');
-            hideError();
-            progressBar.style.width = '0%';
-            progressPercent.textContent = '0%';
-            btnUpload.disabled = !currentFile;
-            
-            if (currentFile) {
-                btnUpload.classList.remove('bg-gray-300', 'text-gray-500');
-                btnUpload.classList.add('bg-brand-600', 'hover:bg-brand-700', 'text-white', 'shadow-md');
-            } else {
-                btnUpload.classList.add('bg-gray-300', 'text-gray-500');
-                btnUpload.classList.remove('bg-brand-600', 'hover:bg-brand-700', 'text-white', 'shadow-md');
-            }
-        }
-
-        // --- File Selection Logic ---
-
+        // File Selection Logic
         function handleFile(file) {
             if (!file) return;
-            currentFile = file;
+            selectedFile = file;
             
-            // Update UI
-            fileNameEl.textContent = file.name;
-            fileSizeEl.textContent = formatBytes(file.size);
-            
-            dropzoneContent.classList.add('hidden');
-            filePreview.classList.remove('hidden');
-            
-            resetUI();
+            hideError();
+            dropZone.classList.add('hidden');
+            fileInfo.classList.remove('hidden');
+            fileName.textContent = file.name;
+            fileSize.textContent = formatBytes(file.size);
+            uploadBtn.removeAttribute('disabled');
         }
 
-        function removeFile(e) {
-            e.stopPropagation(); // Prevent triggering file input click
-            currentFile = null;
-            fileInput.value = '';
-            
-            dropzoneContent.classList.remove('hidden');
-            filePreview.classList.add('hidden');
-            
-            resetUI();
-        }
+        // Event Listeners for file input
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
-        // --- Event Listeners ---
-
-        // Dropzone interactions
-        dropzone.addEventListener('click', () => fileInput.click());
-        
-        dropzone.addEventListener('dragover', (e) => {
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropzone.classList.add('dropzone-active');
+            dropZone.classList.add('dragover');
         });
 
-        dropzone.addEventListener('dragleave', () => {
-            dropzone.classList.remove('dropzone-active');
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
         });
 
-        dropzone.addEventListener('drop', (e) => {
+        dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropzone.classList.remove('dropzone-active');
-            
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
                 handleFile(e.dataTransfer.files[0]);
             }
         });
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
+        // Remove File
+        removeFileBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            uploadBtn.setAttribute('disabled', 'true');
         });
 
-        btnRemoveFile.addEventListener('click', removeFile);
+        // Upload Process
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
 
-        // Copy button
-        btnCopy.addEventListener('click', () => {
-            resultUrl.select();
-            document.execCommand('copy');
-            // Alternative modern clipboard API
-            // navigator.clipboard.writeText(resultUrl.value);
-            showToast('คัดลอกลิงก์เรียบร้อยแล้ว!');
-        });
-
-        // --- Upload Logic ---
-
-        btnUpload.addEventListener('click', async () => {
-            if (!currentFile) return;
-
-            const provider = document.querySelector('input[name="provider"]:checked').value;
-            
-            btnUpload.disabled = true;
-            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดำเนินการ...';
-            btnUpload.classList.replace('bg-brand-600', 'bg-gray-400');
-            
-            progressContainer.classList.remove('hidden');
-            resultContainer.classList.add('hidden');
+            // UI Adjustments
+            uploadBtn.classList.add('hidden');
+            removeFileBtn.classList.add('hidden');
+            progressArea.classList.remove('hidden');
             hideError();
-            
+
             try {
-                let url = '';
+                // 1. Get Gofile Server
+                progressText.innerHTML = '<i class="fa-solid fa-server fa-spin text-indigo-500 mr-2"></i>หาเซิร์ฟเวอร์...';
+                const serverRes = await fetch('https://api.gofile.io/servers', { method: 'GET' });
+                const serverData = await serverRes.json();
                 
-                if (provider === 'gofile') {
-                    url = await uploadToGofile(currentFile);
-                } else if (provider === 'catbox') {
-                    url = await uploadToCatbox(currentFile);
+                if (serverData.status !== 'ok') {
+                    throw new Error("ไม่สามารถเชื่อมต่อ Gofile Server ได้");
                 }
+                const server = serverData.data.servers[0].name;
 
-                resultUrl.value = url;
-                btnOpen.href = url;
-                progressContainer.classList.add('hidden');
-                resultContainer.classList.remove('hidden');
+                // 2. Upload File via XHR for progress tracking
+                progressText.innerHTML = '<i class="fa-solid fa-cloud-arrow-up animate-bounce text-indigo-500 mr-2"></i>กำลังอัปโหลด...';
                 
-                showToast('อัปโหลดเสร็จสมบูรณ์!');
+                const formData = new FormData();
+                formData.append('file', selectedFile);
 
-            } catch (err) {
-                console.error(err);
-                progressContainer.classList.add('hidden');
-                showError(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด กรุณาลองใหม่อีกครั้ง');
-            } finally {
-                btnUpload.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> อัปโหลดไฟล์ใหม่';
-                btnUpload.classList.replace('bg-gray-400', 'bg-brand-600');
-                btnUpload.disabled = false;
+                const xhr = new XMLHttpRequest();
+                
+                // Track Progress
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressPercent.textContent = percentComplete + '%';
+                    }
+                });
+
+                // Complete/Error Handlers
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.status === 'ok') {
+                            showSuccess(response.data.downloadPage);
+                        } else {
+                            throw new Error(response.error || "เกิดข้อผิดพลาดในการอัปโหลด");
+                        }
+                    } else {
+                        handleUploadError("เซิร์ฟเวอร์ไม่ตอบสนอง");
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    handleUploadError("การเชื่อมต่อล้มเหลว");
+                });
+
+                // Send
+                xhr.open('POST', `https://${server}.gofile.io/contents/uploadfile`);
+                xhr.send(formData);
+
+            } catch (error) {
+                handleUploadError(error.message);
             }
         });
 
-
-        function updateProgress(percent, statusText = 'กำลังอัปโหลด...') {
-            progressPercent.textContent = `${Math.round(percent)}%`;
-            progressBar.style.width = `${percent}%`;
-            progressStatus.textContent = statusText;
-        }
-
-        async function uploadToGofile(file) {
-            updateProgress(0, 'กำลังเชื่อมต่อเซิร์ฟเวอร์ Gofile...');
+        // Success State
+        function showSuccess(link) {
+            progressArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            resultLink.value = link;
             
-            const serverRes = await fetch('https://api.gofile.io/servers');
-            const serverData = await serverRes.json();
-            
-            if (serverData.status !== 'ok') {
-                throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Gofile ได้ในขณะนี้');
-            }
-            
-            const serverName = serverData.data.servers[0].name;
-            updateProgress(5, `เชื่อมต่อเซิร์ฟเวอร์ ${serverName} แล้ว...`);
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', `https://${serverName}.gofile.io/contents/upload`);
-                
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = 5 + ((e.loaded / e.total) * 94);
-                        updateProgress(percentComplete, 'กำลังอัปโหลดไฟล์...');
-                    }
-                };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            if (response.status === 'ok') {
-                                updateProgress(100, 'อัปโหลดเสร็จสิ้น!');
-                                resolve(response.data.downloadPage);
-                            } else {
-                                reject(new Error('Gofile API Error: ' + response.status));
-                            }
-                        } catch(e) {
-                            reject(new Error('รูปแบบการตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง'));
-                        }
-                    } else {
-                        reject(new Error(`Server error: ${xhr.status}`));
-                    }
-                };
-
-                xhr.onerror = () => {
-                    reject(new Error('เกิดข้อผิดพลาดด้านเครือข่าย หรือเซิร์ฟเวอร์ไม่ตอบสนอง'));
-                };
-
-                xhr.send(formData);
+            // Generate QR Code
+            qrcodeContainer.innerHTML = ""; // Clear old QR code
+            qrCodeObj = new QRCode(qrcodeContainer, {
+                text: link,
+                width: 150,
+                height: 150,
+                colorDark : "#1f2937",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
             });
         }
 
-        async function uploadToCatbox(file) {
-            updateProgress(0, 'กำลังเตรียมไฟล์สำหรับ Catbox...');
-
-            const formData = new FormData();
-            formData.append('reqtype', 'fileupload');
-            formData.append('fileToUpload', file);
-
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', 'https://catbox.moe/user/api.php');
-                
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 99;
-                        updateProgress(percentComplete, 'กำลังส่งข้อมูลไปยัง Catbox...');
-                    }
-                };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        const response = xhr.responseText;
-                        if(response.startsWith('http')) {
-                            updateProgress(100, 'อัปโหลดเสร็จสิ้น!');
-                            resolve(response);
-                        } else {
-                            reject(new Error('Catbox ตอบกลับด้วยรูปแบบที่ไม่ใช่ลิงก์: ' + response));
-                        }
-                    } else {
-                        reject(new Error(`Catbox error: ${xhr.status}. (อาจเกิดจากการบล็อก CORS ของเบราว์เซอร์)`));
-                    }
-                };
-
-                xhr.onerror = () => {
-                    reject(new Error('ไม่สามารถเชื่อมต่อ Catbox ได้ (อาจเกิดจากการบล็อก CORS ของเบราว์เซอร์ โปรดลองใช้ Gofile แทน)'));
-                };
-
-                xhr.send(formData);
-            });
+        // Error State during upload
+        function handleUploadError(msg) {
+            showError(msg);
+            uploadBtn.classList.remove('hidden');
+            removeFileBtn.classList.remove('hidden');
+            progressArea.classList.add('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
         }
+
+        // Copy Link
+        copyBtn.addEventListener('click', () => {
+            resultLink.select();
+            document.execCommand('copy');
+            
+            const icon = copyBtn.querySelector('i');
+            icon.className = 'fa-solid fa-check';
+            copyBtn.classList.add('bg-green-600');
+            copyBtn.classList.remove('bg-gray-800');
+            
+            setTimeout(() => {
+                icon.className = 'fa-regular fa-copy';
+                copyBtn.classList.remove('bg-green-600');
+                copyBtn.classList.add('bg-gray-800');
+            }, 2000);
+        });
+
+        // Reset App
+        resetBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            
+            resultArea.classList.add('hidden');
+            fileInfo.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            
+            uploadBtn.classList.remove('hidden');
+            uploadBtn.setAttribute('disabled', 'true');
+            removeFileBtn.classList.remove('hidden');
+            
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            qrcodeContainer.innerHTML = "";
+        });
     </script>
 </body>
 </html>
