@@ -22,7 +22,6 @@ Function Install-Process {
         Write-Error "Download Failed: $_"
         return
     }
-    
     Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
     Remove-Item $ZipPath -ErrorAction SilentlyContinue
     
