@@ -1,115 +1,64 @@
+# 1. Admin Check
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    $arguments = "& '" + $MyInvocation.MyCommand.Definition + "'"
-    try {
-        Start-Process powershell -Verb RunAs -ArgumentList $arguments
-    } catch {
-        Write-Host "Execution requires Administrator privileges." -ForegroundColor Red
-    }
+    $arguments = "& '" + $myinvocation.mycommand.definition + "'"
+    Start-Process powershell -ArgumentList $arguments -Verb RunAs
     exit
 }
 
-function Show-Menu {
-    Clear-Host
-    Write-Host "==============================================" -ForegroundColor Cyan
-    Write-Host "     Microphone Volume Lock Manager V1.0      " -ForegroundColor Cyan
-    Write-Host "==============================================" -ForegroundColor Cyan
-    Write-Host "1. Install (Setup Lock & Persistence)" -ForegroundColor Green
-    Write-Host "2. Uninstall (Remove Lock & Cleanup)" -ForegroundColor Yellow
-    Write-Host "3. Exit" -ForegroundColor Red
-    Write-Host "==============================================" -ForegroundColor Cyan
-}
+# กำหนดตัวแปร
+$WorkDir = "C:\phwyverysad"
+$ZipUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
 
-function Install-MicLock {
-    $tempDir = "C:\phwyverysad"
-    $zipUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/lock_mic_volume.zip"
-    $zipFile = Join-Path $tempDir "lock_mic_volume.zip"
+# UI Helper
+function Write-Color ($text, $color) { Write-Host $text -ForegroundColor $color }
 
-    # Cleanup old temp if exists
-    if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-
-    Write-Host "[*] Downloading resources..." -ForegroundColor Cyan
-    try {
-        Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -TimeoutSec 60
-    } catch {
-        Write-Host "[!] Download failed: $($_.Exception.Message)" -ForegroundColor Red
-        return
-    }
-
-    Write-Host "[*] Extracting files..." -ForegroundColor Cyan
-    Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
+# 2. ฟังก์ชัน Install
+function Install-Lock {
+    Write-Color "`n[*] เริ่มต้นการติดตั้ง..." Cyan
+    if (!(Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory }
     
-    # Logic: Move files from subfolder to root if necessary (Flatten structure)
-    $subFolders = Get-ChildItem -Path $tempDir -Directory
-    if ($subFolders.Count -eq 1) {
-        Get-ChildItem -Path $subFolders.FullName | Move-Item -Destination $tempDir -Force
-    }
+    $zipPath = "$WorkDir\temp.zip"
+    Invoke-WebRequest -Uri $ZipUrl -OutFile $zipPath
+    Expand-Archive -Path $zipPath -DestinationPath $WorkDir -Force
+    Remove-Item $zipPath
 
-    Write-Host "`nSelect Volume Lock Level:" -ForegroundColor Cyan
-    Write-Host "1) 100%"
-    Write-Host "2) 75%"
-    Write-Host "3) 50%"
-    Write-Host "4) 25%"
-    $volChoice = Read-Host "Choice (1-4)"
+    Write-Color "เลือกความดังที่ต้องการล็อก:" Yellow
+    Write-Host "1. 100% | 2. 75% | 3. 50% | 4. 25%"
+    $choice = Read-Host "ใส่หมายเลขที่เลือก"
+    $folders = @("100", "75", "50", "25")
+    $selectedFolder = "$WorkDir\" + $folders[[int]$choice-1]
 
-    $folderName = switch ($volChoice) {
-        "1" { "100%" }
-        "2" { "75%" }
-        "3" { "50%" }
-        "4" { "25%" }
-        Default { "100%" }
-    }
-
-    $targetBatch = Join-Path $tempDir "$folderName\Run_atomatically.bat"
-
-    if (Test-Path $targetBatch) {
-        Write-Host "[*] Executing configuration for $folderName..." -ForegroundColor Green
-        # Run background
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$targetBatch`"" -WorkingDirectory (Split-Path $targetBatch) -WindowStyle Hidden -Wait
-        
-        Write-Host "[*] Cleaning up temporary files..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
-        Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "[+] Installation Complete!" -ForegroundColor Green
-    } else {
-        Write-Host "[!] Error: Folder '$folderName' or Run_atomatically.bat not found in Zip." -ForegroundColor Red
-    }
+    Write-Color "[*] รันโปรแกรมในเบื้องหลัง..." Green
+    $process = Start-Process "$selectedFolder\Run_atomatically.bat" -WindowStyle Hidden -PassThru
+    
+    # รอจนกว่า process จะจบ
+    while (!$process.HasExited) { Start-Sleep -Seconds 5 }
+    
+    Remove-Item $WorkDir -Recurse -Force
+    Write-Color "[!] งานเสร็จสิ้นและล้างไฟล์ชั่วคราวแล้ว" Cyan
 }
 
-function Uninstall-MicLock {
-    Write-Host "[*] Stopping active processes..." -ForegroundColor Yellow
+# 3. ฟังก์ชัน Uninstall
+function Uninstall-Lock {
+    Write-Color "[*] กำลังถอนการติดตั้ง..." Yellow
     Stop-Process -Name "nircmdc" -Force -ErrorAction SilentlyContinue
-
-    $winPath = $env:WINDIR
-    $startupPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
-
-    $filesToRemove = @(
-        "$winPath\lock_mic_vol.bat",
-        "$winPath\hide_cmd_window2.vbs",
-        "$winPath\nircmdc.exe",
-        "$startupPath\start_lock_mic_vol.bat"
-    )
-
-    foreach ($file in $filesToRemove) {
-        if (Test-Path $file) {
-            Remove-Item $file -Force -ErrorAction SilentlyContinue
-            Write-Host "[-] Removed: $file" -ForegroundColor Yellow
-        }
-    }
-
-    Write-Host "[+] Uninstallation Complete!" -ForegroundColor Green
+    $files = @("C:\Windows\lock_mic_vol.bat", "C:\Windows\hide_cmd_window2.vbs", "C:\Windows\nircmdc.exe")
+    foreach ($f in $files) { if (Test-Path $f) { Remove-Item $f -Force } }
+    
+    $startupPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\start_lock_mic_vol.bat"
+    if (Test-Path $startupPath) { Remove-Item $startupPath -Force }
+    Write-Color "[!] ถอนการติดตั้งเรียบร้อย" Green
 }
 
-# Main Loop
-do {
-    Show-Menu
-    $choice = Read-Host "Select an option"
-    switch ($choice) {
-        "1" { Install-MicLock }
-        "2" { Uninstall-MicLock }
-        "3" { break }
-        Default { Write-Host "Invalid option." -ForegroundColor Red }
-    }
-    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
-    $null = [Console]::ReadKey()
-} while ($choice -ne "3")
+# Menu
+Clear-Host
+Write-Color "=== ระบบจัดการไมโครโฟน ===" Cyan
+Write-Host "1. Install" -ForegroundColor Green
+Write-Host "2. Uninstall" -ForegroundColor Yellow
+$opt = Read-Host "เลือกเมนู"
+
+if ($opt -eq "1") { Install-Lock }
+elseif ($opt -eq "2") { Uninstall-Lock }
+
+Write-Host "`nกดปุ่มใดๆ เพื่อออกจากโปรแกรม..."
+$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
