@@ -2,7 +2,7 @@
 
 $menuItems = @{
     1  = @{ Name = "ล็อกไมค์ (Lock Mic)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic.ps1 | iex" }
-    2  = @{ Name = "เสกเกมสตรีม (Steam)"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/add_games_steam.ps1 | iex" }
+    2  = @{ Name = "เสกเกมสตรีม (Steam)"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/import_games_steam.ps1 | iex" }
     3  = @{ Name = "PowerPlan (KernelOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_powerplan.ps1 | iex" }
     4  = @{ Name = "Spotify Premium"; Cmd = "irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/spotify_premium.ps1 | iex" }
     5  = @{ Name = "โหลด OS ทับ (Atlas/ReviOS)"; Cmd = "irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/playbook_downloader.ps1 | iex" }
