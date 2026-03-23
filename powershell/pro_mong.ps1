@@ -1,119 +1,98 @@
-# ==============================================================================
-# 1. Admin Privilege Check (ขอสิทธิ์ผู้ดูแลระบบ)
-# ==============================================================================
+# ตรวจสอบสิทธิ์ Administrator (จำเป็นสำหรับการเขียนไฟล์ลง C:\Program Files)
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process PowerShell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    Write-Host "กรุณาเปิด PowerShell ในฐานะ Administrator (Run as Administrator)" -ForegroundColor Red
+    Write-Host "กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit
 }
 
-# ==============================================================================
-# 2. Environment Setup (ตั้งค่าสภาพแวดล้อมภาษาไทยและเครือข่าย)
-# ==============================================================================
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+# บังคับใช้ TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ProgressPreference = 'SilentlyContinue'
 
-# ==============================================================================
-# 3. Global Variables (ตัวแปรส่วนกลาง)
-# ==============================================================================
-$URL      = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/opengl32.dll"
-$PATH_NXT = "C:\Program Files\BlueStacks_nxt"
-$PATH_MSI = "C:\Program Files\BlueStacks_msi5"
+# เมนูหลัก
+Write-Host "กรุณาเลือกคำสั่ง:" -ForegroundColor Cyan
+Write-Host "1. Install"
+Write-Host "2. Remove"
+$mainChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
 
-# ==============================================================================
-# 4. Helper Functions (ฟังก์ชันช่วยเหลือ)
-# ==============================================================================
+if ($mainChoice -notin @('1','2')) {
+    Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
+    exit
+}
 
-# ฟังก์ชันปิดและเปิด HD-Player ใหม่
-function Restart-Player ($folderPath) {
-    $exe = Join-Path $folderPath "HD-Player.exe"
-    $proc = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }
-    
-    if ($proc) {
-        Write-Host "`n[!] ตรวจพบ HD-Player กำลังทำงานอยู่" -ForegroundColor Cyan
-        Read-Host "กด Enter เพื่อ Restart (ปิดและเปิดใหม่)"
-        Stop-Process -Id $proc.Id -Force
-        Start-Sleep -Seconds 1
-        if (Test-Path $exe) { Start-Process -FilePath $exe }
-        Write-Host "[+] กดปุ่ม INS เพื่อเปิดเมนูมอง" -ForegroundColor Green
-    } else {
-        Write-Host "`n[+] กดปุ่ม INS เพื่อเปิดเมนูมอง" -ForegroundColor Green
+# เมนูย่อย
+Write-Host "`nกรุณาเลือก Emulator:" -ForegroundColor Cyan
+Write-Host "1. BlueStacks App Player"
+Write-Host "2. MSI App Player x BlueStacks"
+$emuChoice = Read-Host "ใส่ตัวเลข 1 หรือ 2"
+
+if ($emuChoice -notin @('1','2')) {
+    Write-Host "เลือกไม่ถูกต้อง ออกจากโปรแกรม..." -ForegroundColor Red
+    exit
+}
+
+# กำหนดเส้นทางตามที่เลือก
+if ($emuChoice -eq '1') {
+    $targetFolder = "C:\Program Files\BlueStacks_nxt"
+} else {
+    $targetFolder = "C:\Program Files\BlueStacks_msi5"
+}
+
+$targetFile = "$targetFolder\opengl32.dll"
+$downloadUrl = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/opengl32.dll"
+
+# ----------------- INSTALL -----------------
+if ($mainChoice -eq '1') {
+    Write-Host "`nกำลังดำเนินการติดตั้ง..." -ForegroundColor Yellow
+
+    # สร้างโฟลเดอร์หากไม่มีอยู่
+    if (!(Test-Path -Path $targetFolder)) {
+        New-Item -ItemType Directory -Force -Path $targetFolder | Out-Null
     }
-}
 
-# ฟังก์ชันปิดโปรแกรมแบบสมบูรณ์
-function Exit-Terminal {
-    Write-Host "`n[!] กดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    Stop-Process -Id $PID -Force
-}
-
-# ==============================================================================
-# 5. Main Menu (เมนูหลัก)
-# ==============================================================================
-Clear-Host
-Write-Host "================================" -ForegroundColor Magenta
-Write-Host "      MOD MANAGER (CLEAN)       "
-Write-Host "================================" -ForegroundColor Magenta
-Write-Host "1. Install (ติดตั้ง)"
-Write-Host "2. Remove (ถอนการติดตั้ง)"
-$choice = Read-Host "`nเลือกรายการ (1-2)"
-
-# --- การตรวจสอบเส้นทางเป้าหมาย ---
-if ($choice -match '1|2') {
-    Clear-Host
-    Write-Host "--- เลือกโปรแกรมจำลอง ---" -ForegroundColor Cyan
-    Write-Host "1. BlueStacks App Player"
-    Write-Host "2. MSI App Player x BlueStacks"
-    $appChoice = Read-Host "เลือกรายการ (1-2)"
-    
-    $targetDir = if ($appChoice -eq '1') { $PATH_NXT } else { $PATH_MSI }
-    $targetFile = Join-Path $targetDir "opengl32.dll"
-    $exePath = Join-Path $targetDir "HD-Player.exe"
-}
-
-# ==============================================================================
-# 6. Action Logic (การทำงานตามที่เลือก)
-# ==============================================================================
-
-# --- INSTALL ---
-if ($choice -eq '1') {
-    if (!(Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
-    
-    Write-Host "`n[*] กำลังดาวน์โหลดไฟล์ด้วย WebClient (TLS 1.2)..." -ForegroundColor Yellow
     try {
-        $wc = New-Object System.Net.WebClient
-        $wc.DownloadFile($URL, $targetFile)
-        $wc.Dispose()
-        Write-Host "[OK] ดาวน์โหลดสำเร็จ!" -ForegroundColor Green
-        Restart-Player $targetDir
+        # ปิด Progress Bar ชั่วคราว ลดการใช้ทรัพยากร UI
+        $ProgressPreference = 'SilentlyContinue'
+
+        # ใช้ .NET WebClient ดาวน์โหลดไฟล์แบบ Synchronous ตรงๆ
+        $webClient = New-Object System.Net.WebClient
+        $webClient.DownloadFile($downloadUrl, $targetFile)
+        
+        Write-Host "ดาวน์โหลดและติดตั้งไฟล์เสร็จสิ้น" -ForegroundColor Green
+
+        # ตรวจสอบว่าเปิด HD-Player.exe อยู่หรือไม่
+        $isRunning = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue
+
+        if ($isRunning) {
+            Write-Host "โปรแกรมกำลังเปิดอยู่" -ForegroundColor Yellow
+            $null = Read-Host "กดปุ่ม เอ็นเทอร์เพื่อ รีสตาร์ส"
+            Write-Host "กดปุ่ม ins เพื่อเปิด เมนูมอง" -ForegroundColor Cyan
+        } else {
+            Write-Host "กดปุ่ม ins เพื่อเปิด เมนูมอง" -ForegroundColor Cyan
+        }
+
     } catch {
-        Write-Host "[ERR] ไม่สามารถดาวน์โหลดได้: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "เกิดข้อผิดพลาดในการดาวน์โหลด: $($_.Exception.Message)" -ForegroundColor Red
     }
-    Exit-Terminal
 }
 
-# --- REMOVE ---
-elseif ($choice -eq '2') {
-    Write-Host "`n[*] กำลังดำเนินการลบไฟล์..." -ForegroundColor Yellow
+# ----------------- REMOVE -----------------
+elseif ($mainChoice -eq '2') {
+    Write-Host "`nกำลังดำเนินการลบไฟล์..." -ForegroundColor Yellow
     
-    # บังคับปิดก่อนลบ
-    $proc = Get-Process -Name "HD-Player" -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exePath }
-    if ($proc) { Stop-Process -Id $proc.Id -Force; Start-Sleep -Seconds 1 }
-
     if (Test-Path $targetFile) {
-        Remove-Item -Path $targetFile -Force
-        Write-Host "[OK] ลบไฟล์สำเร็จแล้ว!" -ForegroundColor Green
-        Read-Host "กด Enter เพื่อ Restart HD-Player"
-        if (Test-Path $exePath) { Start-Process -FilePath $exePath }
+        try {
+            Remove-Item -Path $targetFile -Force
+            Write-Host "ลบสำเร็จแล้ว" -ForegroundColor Green
+            $null = Read-Host "กดปุ่ม เอ็นเทอร์เพื่อ รีสตาร์ส"
+        } catch {
+            Write-Host "เกิดข้อผิดพลาดในการลบไฟล์ (โปรแกรมอาจจะเปิดใช้งานอยู่): $($_.Exception.Message)" -ForegroundColor Red
+        }
     } else {
-        Write-Host "[!] ไม่พบไฟล์ในระบบ" -ForegroundColor Red
+        Write-Host "ไม่พบไฟล์เป้าหมาย (อาจถูกลบไปแล้ว)" -ForegroundColor Yellow
     }
-    Exit-Terminal
 }
 
-else {
-    Write-Host "เลือกไม่ถูกต้อง" -ForegroundColor Red
-    Exit-Terminal
-}
+# คำสั่งปิดท้าย (รอกดปุ่มใดๆ เพื่อปิด)
+Write-Host "`nกดปุ่มอะไรก็ได้เพื่อปิดหน้าต่างนี้..." -ForegroundColor Gray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
