@@ -11,7 +11,7 @@ function Show-Menu {
 }
 
 function Download-EmptyStandbyList {
-    $url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/EmptyStandbyList.exe"
+    $url = "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/EmptyStandbyList.exe"
     $dest = "C:\Windows\System32\EmptyStandbyList.exe"
     
     if (-not (Test-Path $dest)) {

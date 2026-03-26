@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Discord Fake Mute/Deafen (Draggable & Click Outside)
+// @name         Discord Fake Mic
 // @namespace    http://tampermonkey.net/
 // @version      2.2
 // @description  เมนูปลอม Mute/Deafen ลากได้ ดูดติดขอบ และคลิกพื้นที่ว่างเพื่อปิดเมนูได้
@@ -15,7 +15,6 @@
     let spoofMute = false;
     let spoofDeafen = false;
 
-    // 1. ดักจับ WebSocket ปลอมสถานะ
     const originalSend = WebSocket.prototype.send;
     WebSocket.prototype.send = function (data) {
         try {
@@ -33,7 +32,6 @@
 
     console.log("%c[FakeMuteDeafen] WebSocket Hooked!", "color: lime; font-weight: bold;");
 
-    // 2. สร้าง UI เมื่อโหลดเสร็จ
     const initUI = () => {
         const style = document.createElement("style");
         style.innerHTML = `
@@ -51,7 +49,6 @@
             #fm-wrapper.dragging {
                 transition: none !important;
             }
-
             #fm-toggle-btn {
                 background: #5865F2;
                 color: white;
@@ -72,8 +69,6 @@
             }
             #fm-toggle-btn:active { cursor: grabbing; }
             #fm-toggle-btn:hover { background: #4752c4; }
-
-            /* แอนิเมชันหมุนไอคอนฟันเฟือง */
             #fm-icon {
                 display: inline-block;
                 transition: transform 0.3s ease;
@@ -81,13 +76,10 @@
             #fm-wrapper.menu-open #fm-icon {
                 transform: rotate(90deg);
             }
-
-            /* --- ระบบซ่อนขอบจอ --- */
             .snap-right #fm-toggle-btn { transform: translateX(25px); }
             .snap-right:hover #fm-toggle-btn, .snap-right.menu-open #fm-toggle-btn { transform: translateX(0); }
             .snap-left #fm-toggle-btn { transform: translateX(-25px); }
             .snap-left:hover #fm-toggle-btn, .snap-left.menu-open #fm-toggle-btn { transform: translateX(0); }
-
             #fm-panel {
                 position: absolute;
                 top: 50%;
@@ -104,17 +96,13 @@
                 transform: translateY(-50%) scale(0.8);
                 z-index: 1;
             }
-
-            /* ตำแหน่ง Panel ซ้าย/ขวา */
             .snap-right #fm-panel { right: 60px; left: auto; transform-origin: right center; }
             .snap-left #fm-panel { left: 60px; right: auto; transform-origin: left center; }
-
             #fm-wrapper.menu-open #fm-panel {
                 opacity: 1;
                 pointer-events: auto;
                 transform: translateY(-50%) scale(1);
             }
-
             .fm-title {
                 font-weight: 800;
                 font-size: 14px;
@@ -184,7 +172,6 @@
         muteBtn.onclick = () => { spoofMute = !spoofMute; updateButtons(); };
         deafenBtn.onclick = () => { spoofDeafen = !spoofDeafen; updateButtons(); };
 
-        // --- ระบบ Drag & Snap ---
         btn.addEventListener("mousedown", (e) => {
             if (e.button !== 0) return;
             isDragging = true;
@@ -244,15 +231,12 @@
             wrapper.style.top = `${finalTop}px`;
         });
 
-        // --- การกดเปิด-ปิด เมนู ---
         btn.addEventListener("click", () => {
-            if (isMoved) return; // ถ้าลากอยู่ ไม่ให้เปิดเมนู
+            if (isMoved) return;
             wrapper.classList.toggle("menu-open");
         });
 
-        // ⭐ ไฮไลต์ฟีเจอร์ใหม่: คลิกพื้นที่ว่างเพื่อปิดเมนู
         document.addEventListener("click", (e) => {
-            // เช็คว่าเมนูเปิดอยู่ไหม และ เช็คว่าจุดที่คลิก ไม่ได้อยู่ในกรอบของปุ่ม/เมนู
             if (wrapper.classList.contains("menu-open") && !wrapper.contains(e.target)) {
                 wrapper.classList.remove("menu-open");
             }

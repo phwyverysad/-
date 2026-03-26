@@ -1,7 +1,7 @@
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = "C:\Web Server"; $file = "$dir\Upload.Share.html"
-$url = "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/Upload.Share.html"
+$url = "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/Upload.Share.html"
 
 # --- Execute Tasks ---
 if (!(Test-Path $dir)) { New-Item -Path $dir -ItemType Directory -Force | Out-Null }

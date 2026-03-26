@@ -22,8 +22,8 @@ Get-AppxPackage -allusers Microsoft.WindowsStore | Foreach {Add-AppxPackage -Dis
 # 3. Running Remote Scripts (irm | iex)
 # ==========================================================
 Write-Host "`n--- 3. Running Custom Scripts from GitHub ---" -ForegroundColor Cyan
-irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_All.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/idm_build.ps1 | iex
+irm https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/Install_All.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/idm_build.ps1 | iex
 
 # ==========================================================
 # 4. Winget MS Store Installations
@@ -38,7 +38,7 @@ foreach ($id in $wingetIds) {
 # 5. Local App Installation (Auto & Manual)
 # ==========================================================
 Write-Host "`n--- 5. Preparing Local Apps ---" -ForegroundColor Cyan
-Start-Process "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/allapp.zip"
+Start-Process "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/allapp.zip"
 Read-Host "Press ENTER after download and extracted to '$env:USERPROFILE\Downloads\allapp'"
 Set-Location "$env:USERPROFILE\Downloads\allapp"
 
@@ -103,13 +103,13 @@ foreach ($dApp in $desktopApps) {
 # 7. Final Optimization Scripts
 # ==========================================================
 Write-Host "`n--- 7. Final System Optimization ---" -ForegroundColor Cyan
-irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/clean_ram.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lossless_scaling.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/avast_premium_security.ps1 | iex
-irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/X-Mouse_Button_Control.ps1 | iex
-irm https://raw.githubusercontent.com/plathx/-/refs/heads/main/spotify_premium.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/Install_powerplan.ps1 | iex
-irm http://raw.githubusercontent.com/plathx/-/refs/heads/main/lock_mic.ps1 | iex
+irm https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/clean_ram.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/lossless_scaling.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/revo_uninstaller_pro.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/avast_premium_security.ps1 | iex
+irm https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/X-Mouse_Button_Control.ps1 | iex
+irm https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/spotify_premium.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/Install_powerplan.ps1 | iex
+irm http://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/lock_mic.ps1 | iex
 
 Write-Host "`n[DONE] All tasks completed successfully!" -ForegroundColor Green

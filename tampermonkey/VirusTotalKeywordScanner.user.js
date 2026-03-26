@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         VirusTotal Keyword Scanner (Draggable UI & Highlight Fix)
+// @name         VirusTotal Keyword Scanner
 // @namespace    http://tampermonkey.net/
 // @version      4.0
 // @description  สแกนคีย์เวิร์ดมัลแวร์ ไฮไลต์สีก่อนแล้วค่อยแจ้งเตือน พร้อมเมนูลอยแบบลากได้
-// @author       Gemini & User (UI by Assistant)
+// @author       phwyverysad
 // @match        https://www.virustotal.com/*
 // @grant        none
 // ==/UserScript==
@@ -11,9 +11,6 @@
 (function() {
     'use strict';
 
-    // -----------------------------------------------------------------
-    // ฐานข้อมูลมัลแวร์ (Malware Database)
-    // -----------------------------------------------------------------
     const malwareDb = {
         'PYTHON': 'Scripting Language: มักถูกใช้รันโค้ดอันตรายผ่าน Packer เช่น PyInstaller เพื่อหลบเลี่ยงการสแกนแบบ Static',
         'EXPIRO': 'File Infector: ไวรัสอันตรายที่แพร่กระจายโดยการเกาะไฟล์ .EXE และขโมยข้อมูลผู้ใช้ส่งกลับไปยัง C2',
@@ -53,9 +50,6 @@
     let foundMalwareSet = new Set();
     let count = 0;
 
-    // -----------------------------------------------------------------
-    // ฟังก์ชันการสแกน (Scanner Logic)
-    // -----------------------------------------------------------------
     function findAndHighlight(root) {
         if (!root) return;
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
@@ -100,7 +94,6 @@
         const intelBtn = document.getElementById('vt-intel-btn');
         if (intelBtn) intelBtn.style.display = 'none';
 
-        // เคลียร์ไฮไลต์เก่าทิ้ง
         document.querySelectorAll('.vt-found').forEach(el => {
             el.style.backgroundColor = '';
             el.style.outline = '';
@@ -108,25 +101,20 @@
             el.classList.remove('vt-found');
         });
 
-        // เริ่มระบายสีไฮไลต์ใหม่
         findAndHighlight(document.body);
 
         if (count > 0 && foundMalwareSet.size > 0) {
             const firstFound = document.querySelector('.vt-found');
             if (firstFound) {
-                // เลื่อนหน้าจอไปหาคำที่เจอแบบ Smooth
                 firstFound.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
-            // ⭐ ใช้ setTimeout หน่วงเวลา 300 มิลลิวินาที
-            // เพื่อให้เบราว์เซอร์ Render สีไฮไลต์ลงจอก่อน แล้ว Alert ค่อยเด้ง
             setTimeout(() => {
                 if (intelBtn) intelBtn.style.display = 'flex';
                 alert(`🚨 พบภัยคุกคาม ${count} จุด!\n\nคลิกที่ไอคอน 🛡️ แล้วเลือกเมนู "📋 View Intel Report" เพื่อดูรายละเอียด`);
             }, 300);
 
         } else {
-            // หน่วงเวลาเล็กน้อยเช่นกัน เผื่อการแสดงผล UI
             setTimeout(() => {
                 alert('🔍 สแกนเสร็จสิ้น: ไม่พบมัลแวร์ตามฐานข้อมูลในหน้านี้');
             }, 100);
@@ -150,9 +138,6 @@
         alert(message);
     }
 
-    // -----------------------------------------------------------------
-    // สร้าง UI (Draggable Floating Menu)
-    // -----------------------------------------------------------------
     const initUI = () => {
         const style = document.createElement("style");
         style.innerHTML = `
@@ -170,7 +155,6 @@
             #vt-wrapper.dragging {
                 transition: none !important;
             }
-
             #vt-toggle-btn {
                 background: #1e1e1e;
                 border: 3px solid #d32f2f;
@@ -193,7 +177,6 @@
                 background: #2a2a2a;
                 border-color: #f44336;
             }
-
             #vt-icon {
                 display: inline-block;
                 transition: transform 0.3s ease;
@@ -201,12 +184,10 @@
             #vt-wrapper.menu-open #vt-icon {
                 transform: scale(1.1);
             }
-
             .snap-right #vt-toggle-btn { transform: translateX(35px); }
             .snap-right:hover #vt-toggle-btn, .snap-right.menu-open #vt-toggle-btn { transform: translateX(0); }
             .snap-left #vt-toggle-btn { transform: translateX(-35px); }
             .snap-left:hover #vt-toggle-btn, .snap-left.menu-open #vt-toggle-btn { transform: translateX(0); }
-
             #vt-panel {
                 position: absolute;
                 top: 50%;
@@ -222,16 +203,13 @@
                 transform: translateY(-50%) scale(0.8);
                 z-index: 1;
             }
-
             .snap-right #vt-panel { right: 75px; left: auto; transform-origin: right center; }
             .snap-left #vt-panel { left: 75px; right: auto; transform-origin: left center; }
-
             #vt-wrapper.menu-open #vt-panel {
                 opacity: 1;
                 pointer-events: auto;
                 transform: translateY(-50%) scale(1);
             }
-
             .vt-title {
                 font-weight: 800;
                 font-size: 15px;
@@ -242,7 +220,6 @@
                 padding-bottom: 10px;
                 letter-spacing: 0.5px;
             }
-
             .vt-btn {
                 width: 100%;
                 color: white;
@@ -260,10 +237,8 @@
                 gap: 8px;
             }
             .vt-btn:last-child { margin-bottom: 0; }
-
             #vt-scan-btn { background: linear-gradient(135deg, #d32f2f, #b71c1c); box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3); }
             #vt-scan-btn:hover { background: linear-gradient(135deg, #f44336, #d32f2f); transform: translateY(-2px); }
-
             #vt-intel-btn { background: linear-gradient(135deg, #1976d2, #0d47a1); box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3); }
             #vt-intel-btn:hover { background: linear-gradient(135deg, #2196f3, #1976d2); transform: translateY(-2px); }
         `;

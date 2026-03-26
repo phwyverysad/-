@@ -4,153 +4,222 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Microsoft 365 ProPlus Retail Downloads</title>
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
             --primary-color: #0078d4;
-            --bg-color: #f3f2f1;
-            --text-color: #323130;
+            --primary-hover: #005a9e;
+            --bg-gradient: linear-gradient(135deg, #f3f2f1 0%, #e1dfdd 100%);
             --card-bg: #ffffff;
+            --text-main: #323130;
+            --text-muted: #605e5c;
             --border-color: #edebe9;
         }
 
         body {
             font-family: 'Inter', 'Sarabun', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background: var(--bg-gradient);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 40px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         .container {
             width: 100%;
-            max-width: 1100px;
+            max-width: 1000px;
             background: var(--card-bg);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .header-section i {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
         }
 
         h1 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 30px;
+            color: var(--text-main);
+            margin: 0;
             font-weight: 600;
+            font-size: 28px;
+            letter-spacing: -0.5px;
         }
 
-        .search-box {
-            margin-bottom: 20px;
+        .search-container {
+            position: relative;
+            margin-bottom: 25px;
             width: 100%;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
         }
 
         #searchInput {
             width: 100%;
-            padding: 12px 20px;
+            padding: 14px 20px 14px 50px;
             box-sizing: border-box;
             border: 2px solid var(--border-color);
-            border-radius: 25px;
+            border-radius: 30px;
             font-size: 16px;
+            font-family: 'Sarabun', sans-serif;
             outline: none;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            background-color: #faf9f8;
         }
 
         #searchInput:focus {
             border-color: var(--primary-color);
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.1);
         }
 
         .table-wrapper {
             overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            max-height: 60vh;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            white-space: nowrap;
         }
 
         th {
-            background-color: #faf9f8;
-            color: #605e5c;
+            background-color: #f8f8f8;
+            color: var(--text-muted);
             font-weight: 600;
             text-align: left;
-            padding: 15px;
+            padding: 18px 20px;
             border-bottom: 2px solid var(--border-color);
-            text-transform: uppercase;
             font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         td {
-            padding: 15px;
+            padding: 16px 20px;
             border-bottom: 1px solid var(--border-color);
             font-size: 15px;
+            vertical-align: middle;
         }
 
-        tr:hover {
-            background-color: #f8f8f8;
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #f3f9fd;
+        }
+
+        .lang-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .lang-name {
             font-weight: 600;
-            color: #201f1e;
+            color: var(--text-main);
+        }
+
+        .badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #e1dfdd;
+            color: #484644;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
         }
 
         .btn {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 6px;
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.2s;
-            text-align: center;
-            min-width: 80px;
+            transition: all 0.2s ease;
+            min-width: 110px;
         }
 
         .btn-online {
             background-color: #e1f0fe;
-            color: #0078d4;
+            color: var(--primary-color);
         }
 
         .btn-online:hover {
-            background-color: #0078d4;
+            background-color: var(--primary-color);
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 120, 212, 0.2);
         }
 
         .btn-offline {
-            background-color: #edebe9;
-            color: #323130;
+            background-color: #f3f2f1;
+            color: var(--text-main);
+            border: 1px solid #d2d0ce;
         }
 
         .btn-offline:hover {
-            background-color: #323130;
+            background-color: var(--text-main);
             color: white;
+            border-color: var(--text-main);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
 
-        .badge {
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            background: #f3f2f1;
-            margin-left: 5px;
-            color: #666;
-        }
-
+        /* สำหรับหน้าจอมือถือ */
         @media (max-width: 768px) {
-            .container { padding: 15px; }
-            td, th { padding: 10px; font-size: 13px; }
-            .btn { padding: 6px 10px; min-width: 60px; font-size: 12px; }
+            body { padding: 15px; }
+            .container { padding: 20px; }
+            h1 { font-size: 22px; }
+            th, td { padding: 12px 15px; }
+            .btn { min-width: auto; padding: 6px 12px; font-size: 13px; }
+            .btn i { display: none; /* ซ่อนไอคอนบนมือถือเพื่อประหยัดพื้นที่ */ }
+            .lang-wrapper { flex-direction: column; align-items: flex-start; gap: 4px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Microsoft 365 ProPlus Retail</h1>
+    <div class="header-section">
+        <i class="fab fa-microsoft"></i>
+        <h1>Microsoft 365 ProPlus Retail</h1>
+    </div>
     
-    <div class="search-box">
+    <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
         <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="ค้นหาภาษา เช่น Thai, English, zh-CN...">
     </div>
 
@@ -161,11 +230,12 @@
                     <th>ภาษา (Language)</th>
                     <th>Online x64</th>
                     <th>Online x32</th>
-                    <th>Offline (x32/x64)</th>
+                    <th>Offline (IMG)</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
-                </tbody>
+                <!-- ข้อมูลจะถูกดึงมาแสดงด้วย JavaScript -->
+            </tbody>
         </table>
     </div>
 </div>
@@ -191,14 +261,23 @@
 
     data.forEach(item => {
         const row = document.createElement('tr');
-        const langName = item[0];
+        const rawName = item[0];
         const langCode = item[1];
         
-        row.innerHTML = `git add . && git commit -m "update code" && git push
-            <td class="lang-name">${langName}</td>
-            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x64&language=${langCode}&version=O16GA" class="btn btn-online">Download</a></td>
-            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x86&language=${langCode}&version=O16GA" class="btn btn-online">Download</a></td>
-            <td><a href="https://officecdn.microsoft.com/db/492350f6-3a01-4f97-b9c0-c7c6ddf67d60/media/${langCode}/O365ProPlusRetail.img" class="btn btn-offline">IMG File</a></td>
+        // แยกชื่อภาษา กับ รหัสภาษา ออกจากกัน (เพื่อดีไซน์ที่สวยงามขึ้น)
+        const namePart = rawName.split(' [')[0];
+        const codePart = rawName.split(' [')[1].replace(']', '');
+        
+        row.innerHTML = `
+            <td>
+                <div class="lang-wrapper">
+                    <span class="lang-name">${namePart}</span>
+                    <span class="badge">${codePart}</span>
+                </div>
+            </td>
+            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x64&language=${langCode}&version=O16GA" class="btn btn-online" target="_blank"><i class="fas fa-cloud-download-alt"></i> x64</a></td>
+            <td><a href="https://c2rsetup.officeapps.live.com/c2r/download.aspx?ProductreleaseID=O365ProPlusRetail&platform=x86&language=${langCode}&version=O16GA" class="btn btn-online" target="_blank"><i class="fas fa-cloud-download-alt"></i> x32</a></td>
+            <td><a href="https://officecdn.microsoft.com/db/492350f6-3a01-4f97-b9c0-c7c6ddf67d60/media/${langCode}/O365ProPlusRetail.img" class="btn btn-offline" target="_blank"><i class="fas fa-compact-disc"></i> IMG File</a></td>
         `;
         tableBody.appendChild(row);
     });
@@ -209,7 +288,7 @@
         let table = document.getElementById("downloadTable");
         let tr = table.getElementsByTagName("tr");
 
-        for (let i = 1; i < tr.length; i++) {
+        for (let i = 1; i < tr.length; i++) { // เริ่มที่ 1 เพื่อข้าม Header
             let td = tr[i].getElementsByTagName("td")[0];
             if (td) {
                 let txtValue = td.textContent || td.innerText;

@@ -76,12 +76,12 @@ function Process-VC {
     param([string]$opt)
     $vcData = @{
         '1' = @{ N="VS2017-2026"; x86="https://aka.ms/vc14/vc_redist.x86.exe"; x64="https://aka.ms/vc14/vc_redist.x64.exe" }
-        '2' = @{ N="VS2015"; x86="https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/mu_visual_cpp_2015_redistributable_update_3_x86_9052536.exe"; x64="https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/mu_visual_cpp_2015_redistributable_update_3_x64_9052538.exe" }
+        '2' = @{ N="VS2015"; x86="https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/mu_visual_cpp_2015_redistributable_update_3_x86_9052536.exe"; x64="https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/mu_visual_cpp_2015_redistributable_update_3_x64_9052538.exe" }
         '3' = @{ N="VS2013"; x86="https://aka.ms/highdpimfc2013x86enu"; x64="https://aka.ms/highdpimfc2013x64enu" }
         '4' = @{ N="VS2012"; x86="https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe"; x64="https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe" }
         '5' = @{ N="VS2010"; x86="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe"; x64="https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe" }
         '6' = @{ N="VS2008"; x86="https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"; x64="https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe" }
-        '7' = @{ N="VS2005"; x86="https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/vcredist2005_x86.exe"; x64="https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/vcredist2005_x64.exe" }
+        '7' = @{ N="VS2005"; x86="https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/vcredist2005_x86.exe"; x64="https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/vcredist2005_x64.exe" }
     }
     
     if ($vcData.ContainsKey($opt)) {
@@ -121,8 +121,8 @@ function Process-DotNet {
 
 function Process-DotNetFramework {
     param([string]$opt)
-    if ($opt -eq '1') { Download-And-Install -url "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/NDP48-x86-x64-AllOS-ENU.exe" -fileName "dotnet_framework_4.8.exe" -type "exe" }
-    if ($opt -eq '2') { Download-And-Install -url "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dotNetFx35setup.exe" -fileName "dotnet_framework_3.5.exe" -type "exe" }
+    if ($opt -eq '1') { Download-And-Install -url "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/NDP48-x86-x64-AllOS-ENU.exe" -fileName "dotnet_framework_4.8.exe" -type "exe" }
+    if ($opt -eq '2') { Download-And-Install -url "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dotNetFx35setup.exe" -fileName "dotnet_framework_3.5.exe" -type "exe" }
 }
 
 function Install-VCMenu {
@@ -216,7 +216,7 @@ while ($true) {
         '1' { Install-VCMenu }
         '2' { 
             Ensure-WorkDir
-            Download-And-Install -url "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dxwebsetup.exe" -fileName "dxwebsetup.exe" -type "exe"
+            Download-And-Install -url "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dxwebsetup.exe" -fileName "dxwebsetup.exe" -type "exe"
             Remove-WorkDir 
         }
         '3' { Install-DotNetMenu }
@@ -244,7 +244,7 @@ while ($true) {
             Ensure-WorkDir
             Write-Host "`n[ เริ่มดำเนินการติดตั้งทุกรายการ... ]" -ForegroundColor Magenta
             1..7 | ForEach-Object { Process-VC $_ }
-            Download-And-Install -url "https://github.com/plathx/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dxwebsetup.exe" -fileName "dxwebsetup.exe" -type "exe"
+            Download-And-Install -url "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B8%99%E0%B8%84%E0%B8%AD%E0%B8%A1/dxwebsetup.exe" -fileName "dxwebsetup.exe" -type "exe"
             
             1..9 | ForEach-Object { Process-DotNet "1" $_ }
             1..9 | ForEach-Object { Process-DotNet "2" $_ }
