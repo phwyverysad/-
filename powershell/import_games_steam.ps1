@@ -33,6 +33,6 @@ if ((-not $hasSteam) -and (-not $hasSteamTools)) {
 
 } else {
     Write-Host "พบ Steam และ Steamtools ครบถ้วน! กำลังรันสคริปต์หลัก..." -ForegroundColor Green
-    irm "https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/add_games_steam.ps1" | iex
-    irm "https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/install-plugin.ps1" | iex
+    irm "https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/powershell/add_games_steam.ps1" | iex
+    irm "https://raw.githubusercontent.com/phwyverysad/-/refs/heads/main/powershell/install-plugin.ps1" | iex
 }
