@@ -5,7 +5,7 @@ $u = "https://github.com/phwyverysad/-/releases/download/%E0%B8%88%E0%B8%B9%E0%B
 $args = "/silent", "/install"
 
 if (!(Test-Path $BravePath)) {
-    Write-Host "ไม่พบ Brave Browser, กำลังเริ่มการติดตั้ง..." -ForegroundColor Yellow
+    Write-Host "กำลังเริ่มการติดตั้ง..." -ForegroundColor Yellow
     
     if(!(Test-Path $p)){ New-Item -Path $p -ItemType Directory -Force | Out-Null }
     
@@ -15,7 +15,6 @@ if (!(Test-Path $BravePath)) {
         
         if(Test-Path $f) {
             Start-Process -FilePath $f -ArgumentList $args -Wait
-            Write-Host "ติดตั้ง Brave เรียบร้อยแล้ว" -ForegroundColor Green
         }
     }
     catch {
@@ -25,7 +24,6 @@ if (!(Test-Path $BravePath)) {
         if(Test-Path $f){ Remove-Item -Path $f -Force }
     }
 } else {
-    Write-Host "พบ Brave Browser อยู่ในเครื่องแล้ว ข้ามขั้นตอนการติดตั้ง" -ForegroundColor Cyan
 }
 
 $IconDir = "$env:USERPROFILE\Documents\My_Project\Icons"
